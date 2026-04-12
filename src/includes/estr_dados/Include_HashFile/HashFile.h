@@ -1,7 +1,7 @@
 /**
  * @file HashFile.h
  * @author João Henrique
- * @brief Interface Oca (Strict Opaque) para Hash Extensível.
+ * @brief Interface Oca (Strict Opaque) para Hash Extensível com chaves string.
  * Utiliza retornos inteiros (1 para Sucesso, 0 para Falha) conforme padrão C.
  */
 
@@ -25,30 +25,31 @@ HashFile hash_open(const char* dat_path, const char* idx_path);
 void hash_close(HashFile hf);
 
 /**
- * @brief Insere um registro baseado em chave inteira e valor de texto.
+ * @brief Insere um registro baseado em chave string e valor de texto.
  * @param hf: Instância do hashFile.
- * @param key: Chave para o registro.
+ * @param key: Chave string para o registro (ex: CPF, CEP).
  * @param value: Valor associado a chave.
  * @return 1 se a operação foi bem-sucedida, 0 caso contrário.
  */
-int hash_insert(HashFile hf, int key, const char* value);
+int hash_insert(HashFile hf, const char* key, const char* value);
 
 /**
- * @brief Busca um valor associado a uma chave.
- * @param key Chave de busca.
- * @param out_buffer Ponteiro para o array onde o valor será copiado.
- * @param buffer_size Tamanho do buffer de saída para segurança.
+ * @brief Busca um valor associado a uma chave string.
+ * @param hf: Instância do HashFile.
+ * @param key: Chave de busca (string).
+ * @param out_buffer: Ponteiro para o array onde o valor será copiado (pode ser NULL para apenas verificar existência).
+ * @param buffer_size: Tamanho do buffer de saída para segurança.
  * @return 1 se a chave foi encontrada, 0 caso contrário.
  */
-int hash_search(HashFile hf, int key, char* out_buffer, int buffer_size);
+int hash_search(HashFile hf, const char* key, char* out_buffer, int buffer_size);
 
 /**
  * @brief Remove o registro correspondente à chave informada.
  * @param hf: Instância do HashFile.
- * @param key: Chave do registro a ser removido.
+ * @param key: Chave string do registro a ser removido.
  * @return 1 se o registro foi removido, 0 se não foi encontrado.
  */
-int hash_remove(HashFile hf, int key);
+int hash_remove(HashFile hf, const char* key);
 
 /**
  * @brief Retorna a profundidade global atual do diretório.
@@ -57,21 +58,21 @@ int hash_remove(HashFile hf, int key);
  */
 int hash_get_global_depth(HashFile hf);
 
-
 /**
  * @brief Atualiza o valor associado com a chave fornecida.
  * @param hf: Instância da HashFile.
- * @param keu: Chave do registro a ser atualizada.
+ * @param key: Chave string do registro a ser atualizado.
  * @param new_value: Novo valor a ser associado com a chave.
  * @return 1 se a atualização foi bem sucedida, 0 se a chave não foi encontrada ou ocorreu algum erro.
  */
-int hash_update(HashFile hf, int key, const char *new_value);
+int hash_update(HashFile hf, const char* key, const char *new_value);
 
 /**
  * @brief Percorre todos os registros ativos da Hash.
+ * @param hf: Instância do HashFile.
  * @param callback Função que será chamada para cada registro:
- * recebe a chave e o ponteiro para o dado.
+ * recebe a chave (string) e o ponteiro para o dado.
  */
-void hash_forall(HashFile hf, void (*callback)(int key, const char* value));
+void hash_forall(HashFile hf, void (*callback)(const char* key, const char* value));
 
 #endif // HASH_FILE_H

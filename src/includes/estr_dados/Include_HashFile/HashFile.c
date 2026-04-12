@@ -5,10 +5,11 @@
 
 // --- Definições Internas (Privadas) ---
 #define BUCKET_SIZE 3
+#define KEY_SIZE 50
 
 typedef struct
 {
-    int key;
+    char key[KEY_SIZE];
     char data[50];
 } Record;
 
@@ -32,9 +33,30 @@ typedef struct
     char idx_path[256];
 } InternalHashFile;
 
-static int internal_hash(int key, int depth)
+/**
+ * Função de hash para strings: soma os valores dos caracteres
+ * e aplica a máscara de bits conforme a profundidade.
+ */
+static unsigned int internal_hash(const char *key, int depth)
 {
-    return key & ((1 << depth) - 1);
+    unsigned int h = 0;
+    for (int i = 0; key[i] != '\0'; i++)
+    {
+        h = h * 31 + (unsigned char)key[i];
+    }
+    if (depth == 0)
+        return 0;
+    return h & ((1 << depth) - 1);
+}
+
+/**
+ * Máscara de bits para índice inteiro do diretório (usada internamente no split).
+ */
+static int internal_hash_index(int index, int depth)
+{
+    if (depth == 0)
+        return 0;
+    return index & ((1 << depth) - 1);
 }
 
 static void internal_redistribute(FILE *fp, long old_offset, long new_offset, int new_depth)
@@ -52,7 +74,7 @@ static void internal_redistribute(FILE *fp, long old_offset, long new_offset, in
 
     for (int i = 0; i < old_b.count; i++)
     {
-        int h = internal_hash(old_b.records[i].key, new_depth);
+        unsigned int h = internal_hash(old_b.records[i].key, new_depth);
         if ((h >> (new_depth - 1)) & 1)
         {
             new_b.records[new_b.count++] = old_b.records[i];
@@ -99,11 +121,14 @@ static void internal_split(HashFile hf, int index)
 
     fseek(fp, 0, SEEK_END);
     long new_offset = ftell(fp);
-    Bucket nb = {new_l_depth, 0, {0}};
+    Bucket nb;
+    memset(&nb, 0, sizeof(Bucket));
+    nb.local_depth = new_l_depth;
+    nb.count = 0;
     fwrite(&nb, sizeof(Bucket), 1, fp);
 
     int step = 1 << new_l_depth;
-    int first = internal_hash(index, temp.local_depth) + (1 << temp.local_depth);
+    int first = internal_hash_index(index, temp.local_depth) + (1 << temp.local_depth);
     for (int i = first; i < (1 << dir->global_depth); i += step)
         dir->bucket_offsets[i] = new_offset;
 
@@ -114,6 +139,7 @@ HashFile hash_open(const char *dat_path, const char *idx_path)
 {
     InternalHashFile *hf = malloc(sizeof(InternalHashFile));
     strncpy(hf->idx_path, idx_path, 255);
+    hf->idx_path[255] = '\0';
 
     hf->fp = fopen(dat_path, "rb+");
     if (!hf->fp)
@@ -123,7 +149,10 @@ HashFile hash_open(const char *dat_path, const char *idx_path)
         hf->dir->global_depth = 0;
         hf->dir->bucket_offsets = malloc(sizeof(long));
 
-        Bucket first = {0, 0, {0}};
+        Bucket first;
+        memset(&first, 0, sizeof(Bucket));
+        first.local_depth = 0;
+        first.count = 0;
         fwrite(&first, sizeof(Bucket), 1, hf->fp);
         hf->dir->bucket_offsets[0] = 0;
     }
@@ -140,17 +169,18 @@ HashFile hash_open(const char *dat_path, const char *idx_path)
     return hf;
 }
 
-int hash_insert(HashFile hf, int key, const char *value)
+int hash_insert(HashFile hf, const char *key, const char *value)
 {
     InternalHashFile *ihf = (InternalHashFile *)hf;
 
-    int idx = internal_hash(key, ihf->dir->global_depth);
+    unsigned int idx = internal_hash(key, ihf->dir->global_depth);
     long offset = ihf->dir->bucket_offsets[idx];
 
     Bucket b;
     fseek(ihf->fp, offset, SEEK_SET);
     fread(&b, sizeof(Bucket), 1, ihf->fp);
 
+    /* Verifica duplicata — hash_search com NULL é seguro agora */
     if (hash_search(hf, key, NULL, 0))
     {
         return 0;
@@ -158,8 +188,10 @@ int hash_insert(HashFile hf, int key, const char *value)
 
     if (b.count < BUCKET_SIZE)
     {
-        b.records[b.count].key = key;
+        strncpy(b.records[b.count].key, key, KEY_SIZE - 1);
+        b.records[b.count].key[KEY_SIZE - 1] = '\0';
         strncpy(b.records[b.count].data, value, 49);
+        b.records[b.count].data[49] = '\0';
         b.count++;
         fseek(ihf->fp, offset, SEEK_SET);
         fwrite(&b, sizeof(Bucket), 1, ihf->fp);
@@ -172,11 +204,11 @@ int hash_insert(HashFile hf, int key, const char *value)
     }
 }
 
-int hash_search(HashFile hf, int key, char *out_buffer, int buffer_size)
+int hash_search(HashFile hf, const char *key, char *out_buffer, int buffer_size)
 {
     InternalHashFile *ihf = (InternalHashFile *)hf;
 
-    int idx = internal_hash(key, ihf->dir->global_depth);
+    unsigned int idx = internal_hash(key, ihf->dir->global_depth);
     long offset = ihf->dir->bucket_offsets[idx];
 
     Bucket b;
@@ -185,9 +217,14 @@ int hash_search(HashFile hf, int key, char *out_buffer, int buffer_size)
 
     for (int i = 0; i < b.count; i++)
     {
-        if (b.records[i].key == key)
+        if (strcmp(b.records[i].key, key) == 0)
         {
-            strncpy(out_buffer, b.records[i].data, buffer_size - 1);
+            /* Correção do crash: só copia se o buffer não for NULL */
+            if (out_buffer != NULL && buffer_size > 0)
+            {
+                strncpy(out_buffer, b.records[i].data, buffer_size - 1);
+                out_buffer[buffer_size - 1] = '\0';
+            }
             return 1;
         }
     }
@@ -210,13 +247,13 @@ void hash_close(HashFile hf)
     free(ihf);
 }
 
-int hash_remove(HashFile hf, int key)
+int hash_remove(HashFile hf, const char *key)
 {
     InternalHashFile *ihf = (InternalHashFile *)hf;
     if (!ihf)
         return 0;
 
-    int idx = internal_hash(key, ihf->dir->global_depth);
+    unsigned int idx = internal_hash(key, ihf->dir->global_depth);
     long offset = ihf->dir->bucket_offsets[idx];
 
     Bucket b;
@@ -227,7 +264,7 @@ int hash_remove(HashFile hf, int key)
     int found_idx = -1;
     for (int i = 0; i < b.count; i++)
     {
-        if (b.records[i].key == key)
+        if (strcmp(b.records[i].key, key) == 0)
         {
             found_idx = i;
             break;
@@ -262,13 +299,13 @@ int hash_get_global_depth(HashFile hf)
     return ihf->dir->global_depth;
 }
 
-int hash_update(HashFile hf, int key, const char *new_value)
+int hash_update(HashFile hf, const char *key, const char *new_value)
 {
     InternalHashFile *ihf = (InternalHashFile *)hf;
     if (!ihf || !new_value)
         return 0;
 
-    int idx = internal_hash(key, ihf->dir->global_depth);
+    unsigned int idx = internal_hash(key, ihf->dir->global_depth);
     long offset = ihf->dir->bucket_offsets[idx];
 
     Bucket b;
@@ -277,9 +314,10 @@ int hash_update(HashFile hf, int key, const char *new_value)
 
     for (int i = 0; i < b.count; i++)
     {
-        if (b.records[i].key == key)
+        if (strcmp(b.records[i].key, key) == 0)
         {
             strncpy(b.records[i].data, new_value, 49);
+            b.records[i].data[49] = '\0';
             fseek(ihf->fp, offset, SEEK_SET);
             fwrite(&b, sizeof(Bucket), 1, ihf->fp);
             return 1;
@@ -288,14 +326,15 @@ int hash_update(HashFile hf, int key, const char *new_value)
     return 0;
 }
 
-void hash_forall(HashFile hf, void (*callback)(int key, const char *value))
+void hash_forall(HashFile hf, void (*callback)(const char *key, const char *value))
 {
     InternalHashFile *ihf = (InternalHashFile *)hf;
     if (!ihf || !callback)
         return;
 
     int num_indices = 1 << ihf->dir->global_depth;
-    long *visited_offsets = malloc(sizeof(long) * num_indices);
+    /* Caso global_depth == 0, num_indices = 1, alocamos pelo menos 1 */
+    long *visited_offsets = malloc(sizeof(long) * (num_indices > 0 ? num_indices : 1));
     int visited_count = 0;
 
     for (int i = 0; i < num_indices; i++)
