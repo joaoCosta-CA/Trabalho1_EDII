@@ -12,9 +12,10 @@ const char* IDX_PATH = "test_index.idx";
 int global_counter = 0;
 
 
-void count_records_callback(const char* key, const char* value) {
+void count_records_callback(const char* key, const char* value, void *userdata) {
     (void)key;
     (void)value;
+    (void)userdata;
     global_counter++;
 }
 
@@ -107,7 +108,7 @@ void test_ForAllShouldVisitAllRecords(void) {
     hash_insert(hf, "k20", "B");
     hash_insert(hf, "k30", "C");
     
-    hash_forall(hf, count_records_callback);
+    hash_forall(hf, count_records_callback, NULL);
     
     TEST_ASSERT_EQUAL_INT(3, global_counter);
 }

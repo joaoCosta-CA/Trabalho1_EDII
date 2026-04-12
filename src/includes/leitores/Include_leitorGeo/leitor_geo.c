@@ -11,9 +11,12 @@ typedef struct
     char cstrk[32];
 } EstiloAtual;
 
+/* Estado da estilização corrente mantida sequencialmente pelo arquivo */
+static EstiloAtual estilo_padrao = {1.0, "white", "black"};
+
 /* Funções auxiliares privadas */
-static void tratar_comando_q(char *params, void *hash_quadras);
-static void tratar_comando_cq(char *params, void *hash_quadras);
+static void tratar_comando_q(char *params, HashFile hf_quadras);
+static void tratar_comando_cq(char *params);
 
 /* Função Principal */
 void ler_arquivo_geo(const char *diretorio_base, const char *nome_arquivo, void *hash_quadras)
@@ -55,7 +58,7 @@ void ler_arquivo_geo(const char *diretorio_base, const char *nome_arquivo, void 
             break;
         case 'c':
             if(strcmp(comando, "cq") == 0){
-                tratar_comando_cq(params, hash_quadras);
+                tratar_comando_cq(params);
             }
             break;
         }
@@ -64,6 +67,36 @@ void ler_arquivo_geo(const char *diretorio_base, const char *nome_arquivo, void 
     fclose(arquivo);
 }
 
-static void tratar_comando_q(char *params, void *hass_quadras){}
+static void tratar_comando_q(char *params, HashFile hf_quadras)
+{
+    /* q cep x y w h */
+    char cep[30] = {0};
+    double x = 0, y = 0, w = 0, h = 0;
 
-static void tratar_comando_cq(char *params, void *hash_quadras){}
+    if (sscanf(params, "%29s %lf %lf %lf %lf", cep, &x, &y, &w, &h) == 5)
+    {
+        /* Serializa num formato separado por ; 
+           cep;x;y;w;h;sw;cfill;cstrk */
+        char dados_serializados[250];
+
+        snprintf(dados_serializados, sizeof(dados_serializados), "%s;%f;%f;%f;%f;%f;%s;%s",
+                 cep, x, y, w, h, 
+                 estilo_padrao.sw, estilo_padrao.cfill, estilo_padrao.cstrk);
+        hash_insert(hf_quadras, cep, dados_serializados);
+    }
+}
+
+static void tratar_comando_cq(char *params)
+{
+    /* cq sw cfill cstrk */
+    double sw = 1.0;
+    char cfill[32] = {0};
+    char cstrk[32] = {0};
+
+    if (sscanf(params, "%lf %31s %31s", &sw, cfill, cstrk) == 3)
+    {
+        estilo_padrao.sw = sw;
+        strncpy(estilo_padrao.cfill, cfill, sizeof(estilo_padrao.cfill) - 1);
+        strncpy(estilo_padrao.cstrk, cstrk, sizeof(estilo_padrao.cstrk) - 1);
+    }
+}

@@ -71,8 +71,9 @@ int hash_update(HashFile hf, const char* key, const char *new_value);
  * @brief Percorre todos os registros ativos da Hash.
  * @param hf: Instância do HashFile.
  * @param callback Função que será chamada para cada registro:
- * recebe a chave (string) e o ponteiro para o dado.
+ * recebe a chave (string), o ponteiro para o dado, e o contexto.
+ * @param userdata Ponteiro arbitrário repassado para o callback.
  */
-void hash_forall(HashFile hf, void (*callback)(const char* key, const char* value));
+void hash_forall(HashFile hf, void (*callback)(const char* key, const char* value, void *userdata), void *userdata);
 
 #endif // HASH_FILE_H

@@ -10,7 +10,7 @@
 typedef struct
 {
     char key[KEY_SIZE];
-    char data[50];
+    char data[200];
 } Record;
 
 typedef struct
@@ -190,8 +190,8 @@ int hash_insert(HashFile hf, const char *key, const char *value)
     {
         strncpy(b.records[b.count].key, key, KEY_SIZE - 1);
         b.records[b.count].key[KEY_SIZE - 1] = '\0';
-        strncpy(b.records[b.count].data, value, 49);
-        b.records[b.count].data[49] = '\0';
+        strncpy(b.records[b.count].data, value, 199);
+        b.records[b.count].data[199] = '\0';
         b.count++;
         fseek(ihf->fp, offset, SEEK_SET);
         fwrite(&b, sizeof(Bucket), 1, ihf->fp);
@@ -316,8 +316,8 @@ int hash_update(HashFile hf, const char *key, const char *new_value)
     {
         if (strcmp(b.records[i].key, key) == 0)
         {
-            strncpy(b.records[i].data, new_value, 49);
-            b.records[i].data[49] = '\0';
+            strncpy(b.records[i].data, new_value, 199);
+            b.records[i].data[199] = '\0';
             fseek(ihf->fp, offset, SEEK_SET);
             fwrite(&b, sizeof(Bucket), 1, ihf->fp);
             return 1;
@@ -326,7 +326,7 @@ int hash_update(HashFile hf, const char *key, const char *new_value)
     return 0;
 }
 
-void hash_forall(HashFile hf, void (*callback)(const char *key, const char *value))
+void hash_forall(HashFile hf, void (*callback)(const char *key, const char *value, void *userdata), void *userdata)
 {
     InternalHashFile *ihf = (InternalHashFile *)hf;
     if (!ihf || !callback)
@@ -359,7 +359,7 @@ void hash_forall(HashFile hf, void (*callback)(const char *key, const char *valu
             {
                 for (int r = 0; r < b.count; r++)
                 {
-                    callback(b.records[r].key, b.records[r].data);
+                    callback(b.records[r].key, b.records[r].data, userdata);
                 }
             }
             visited_offsets[visited_count++] = current_offset;

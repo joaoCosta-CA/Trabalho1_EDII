@@ -14,6 +14,8 @@ GEO_DIR    = $(INC_DIR)/leitores/Include_leitorGeo
 QRY_DIR    = $(INC_DIR)/leitores/Include_leitorQry
 PESSOA_DIR = $(INC_DIR)/mundo/Include_pessoa
 QUADRA_DIR = $(INC_DIR)/mundo/Include_quadra
+PM_DIR     = $(INC_DIR)/leitores/Include_leitorPm
+SVG_DIR    = $(INC_DIR)/svg
 PARAM_DIR  = $(INC_DIR)/parametros
 TEST_DIR   = tests
 UNITY_DIR  = unity
@@ -26,12 +28,13 @@ GEO_SRC    = $(GEO_DIR)/leitor_geo.c
 PARAM_SRC  = $(PARAM_DIR)/parametros.c
 PESSOA_SRC = $(PESSOA_DIR)/pessoa.c
 QUADRA_SRC = $(QUADRA_DIR)/quadra.c
+PM_SRC     = $(PM_DIR)/leitorPM.c
+SVG_SRC    = $(SVG_DIR)/svg.c
 
 # Adicione aqui novos módulos conforme criar:
 # QRY_SRC  = $(QRY_DIR)/leitor_qry.c
-# PM_SRC   = $(INC_DIR)/leitores/Include_leitorPm/leitor_pm.c
 
-MOD_SRCS   = $(HASH_SRC) $(LIST_SRC) $(GEO_SRC) $(PARAM_SRC) $(PESSOA_SRC) $(QUADRA_SRC)
+MOD_SRCS   = $(HASH_SRC) $(LIST_SRC) $(GEO_SRC) $(PARAM_SRC) $(PESSOA_SRC) $(QUADRA_SRC) $(PM_SRC) $(SVG_SRC)
 
 # ---- Objetos correspondentes -----------------------------
 MOD_OBJS   = $(MOD_SRCS:.c=.o)

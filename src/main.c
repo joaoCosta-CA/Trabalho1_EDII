@@ -21,6 +21,8 @@
 #include "includes/parametros/parametros.h"
 #include "includes/estr_dados/Include_HashFile/HashFile.h"
 #include "includes/leitores/Include_leitorGeo/leitor_geo.h"
+#include "includes/leitores/Include_leitorPm/leitorPM.h"
+#include "includes/svg/svg.h"
 
 /**
  * Monta o caminho completo de um arquivo de saída no diretório BSD.
@@ -113,7 +115,7 @@ int main(int argc, char *argv[])
     if (arq_pm)
     {
         printf("Lendo arquivo .pm: %s\n", arq_pm);
-        /* TODO: ler_arquivo_pm(dir_entrada, arq_pm, hf_pessoas); */
+        ler_arquivo_pm(dir_entrada, arq_pm, hf_pessoas);
     }
 
     /* --- 5. Processar arquivo .qry (se fornecido) --- */
@@ -123,11 +125,22 @@ int main(int argc, char *argv[])
         /* TODO: ler_arquivo_qry(dir_entrada, arq_qry, hf_quadras, hf_pessoas, dir_saida, nome_base); */
     }
 
-    /* --- 6. Gerar dump legível dos hashfiles (.hfd) --- */
+    /* --- 6. Gerar SVG Base --- */
+    char path_svg[512];
+    monta_caminho_saida(dir_saida, nome_base, "-quadras.svg", path_svg, sizeof(path_svg));
+    printf("Gerando SVG das quadras em: %s\n", path_svg);
+    
+    FILE* f_svg = svg_iniciar(path_svg);
+    if (f_svg) {
+        svg_gerar_quadras(hf_quadras, f_svg);
+        svg_fechar(f_svg);
+    }
+    
+    /* --- 7. Gerar dump legível dos hashfiles (.hfd) --- */
     /* TODO: hash_dump(hf_quadras, path_hfd_quadras);  */
     /* TODO: hash_dump(hf_pessoas, path_hfd_pessoas);  */
 
-    /* --- 7. Fechar tudo --- */
+    /* --- 8. Fechar tudo --- */
     hash_close(hf_quadras);
     hash_close(hf_pessoas);
     parametros_destroy(params);
