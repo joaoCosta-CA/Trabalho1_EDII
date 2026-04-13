@@ -24,6 +24,7 @@
 #include "leitores/Include_leitorPm/leitorPM.h"
 #include "leitores/Include_leitorQry/leitorQry.h"
 #include "svg/svg.h"
+#include "estr_dados/Include_list/list.h"
 
 /**
  * Monta o caminho completo de um arquivo de saída no diretório BSD.
@@ -78,9 +79,16 @@ int main(int argc, char *argv[])
     /* Criar diretório de saída se não existir */
     mkdir(dir_saida, 0755);
 
-    /* Nome base para arquivos de saída (derivado do .geo) */
-    char nome_base[256];
-    extrair_nome_base(arq_geo, nome_base, sizeof(nome_base));
+    /* Nome base para arquivos de saída (derivado do .geo e .qry) */
+    char nome_base[512];
+    extrair_nome_base(arq_geo, nome_base, 256);
+
+    if (arq_qry) {
+        char base_qry[256];
+        extrair_nome_base(arq_qry, base_qry, 256);
+        strcat(nome_base, "-");
+        strcat(nome_base, base_qry);
+    }
 
     /* --- 2. Abrir hashfiles --- */
     char path_hf_quadras[512], path_idx_quadras[512];
@@ -120,16 +128,16 @@ int main(int argc, char *argv[])
     }
 
     /* --- 5. Processar arquivo .qry (se fornecido) --- */
+    void* decoracoes = NULL;
     if (arq_qry)
     {
         printf("Processando arquivo .qry: %s\n", arq_qry);
-        /* leitor_qry processa comandos e altera o estado em hf_quadras */
-        leitor_qry(dir_entrada, arq_qry, hf_quadras);
+        decoracoes = leitor_qry(dir_entrada, arq_qry, hf_quadras, hf_pessoas, dir_saida, nome_base);
     }
 
     /* --- 6. Gerar SVG Base --- */
     char path_svg[512];
-    monta_caminho_saida(dir_saida, nome_base, "-quadras.svg", path_svg, sizeof(path_svg));
+    monta_caminho_saida(dir_saida, nome_base, ".svg", path_svg, sizeof(path_svg));
     printf("Gerando SVG das quadras em: %s\n", path_svg);
     
     double min_x, min_y, max_x, max_y;
@@ -137,20 +145,29 @@ int main(int argc, char *argv[])
     
     // Adiciona uma margem para evitar cortes na borda das figuras
     double margin = 20.0;
-    double vw = (max_x - min_x) + 2 * margin;
-    double vh = (max_y - min_y) + 2 * margin;
-    double vx = min_x - margin;
-    double vy = min_y - margin;
+    double vx = 0;
+    double vy = 0;
+    double vw = max_x + margin;
+    double vh = max_y + margin;
 
     FILE* f_svg = svg_iniciar(path_svg, vx, vy, vw, vh);
     if (f_svg) {
         svg_gerar_quadras(hf_quadras, f_svg);
+        if (decoracoes) {
+            svg_gerar_decoracoes(decoracoes, f_svg);
+            killList(decoracoes, free);
+        }
         svg_fechar(f_svg);
     }
     
     /* --- 7. Gerar dump legível dos hashfiles (.hfd) --- */
-    /* TODO: hash_dump(hf_quadras, path_hfd_quadras);  */
-    /* TODO: hash_dump(hf_pessoas, path_hfd_pessoas);  */
+    char path_hfd_quadras[512], path_hfd_pessoas[512];
+    monta_caminho_saida(dir_saida, nome_base, "-quadras.hfd", path_hfd_quadras, sizeof(path_hfd_quadras));
+    monta_caminho_saida(dir_saida, nome_base, "-pessoas.hfd",  path_hfd_pessoas,  sizeof(path_hfd_pessoas));
+
+    hash_dump(hf_quadras, path_hfd_quadras);
+    hash_dump(hf_pessoas,  path_hfd_pessoas);
+
 
     /* --- 8. Fechar tudo --- */
     hash_close(hf_quadras);

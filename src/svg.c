@@ -4,6 +4,7 @@
 
 #include "svg/svg.h"
 #include "estr_dados/Include_HashFile/HashFile.h"
+#include "estr_dados/Include_list/list.h"
 
 typedef struct {
     double min_x;
@@ -133,7 +134,7 @@ static void imprimir_quadra_svg_callback(const char* key, const char* value, voi
             key, x, y, w, h);
     
     if(strlen(cfill) > 0) {
-        fprintf(svg_file, "fill=\"%s\" ", cfill);
+        fprintf(svg_file, "fill=\"%s\" fill-opacity=\"0.8\" ", cfill);
     } else {
         fprintf(svg_file, "fill=\"none\" "); // Default se vazio
     }
@@ -146,6 +147,8 @@ static void imprimir_quadra_svg_callback(const char* key, const char* value, voi
     }
     
     fprintf(svg_file, " />\n");
+    fprintf(svg_file, "  <text x=\"%f\" y=\"%f\" fill=\"%s\" stroke=\"black\" font-size=\"12\">%s</text>\n", 
+            x + 5.0, y + 9.0, (strlen(cstrk) > 0 ? cstrk : "black"), key);
 }
 
 void svg_gerar_quadras(HashFile hf_quadras, FILE* svg_file) {
@@ -153,4 +156,16 @@ void svg_gerar_quadras(HashFile hf_quadras, FILE* svg_file) {
     
     // Injeta a referência ao arquivo diretamente pro callback através de userdata
     hash_forall(hf_quadras, imprimir_quadra_svg_callback, svg_file);
+}
+
+void svg_gerar_decoracoes(void* decoracoes_list, FILE* f) {
+    if (!decoracoes_list || !f) return;
+    void* pos = getFirst(decoracoes_list);
+    while (pos != NULL) {
+        char* svg_str = (char*)get(decoracoes_list, pos);
+        if (svg_str) {
+            fprintf(f, "%s\n", svg_str);
+        }
+        pos = getNext(decoracoes_list, pos);
+    }
 }

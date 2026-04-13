@@ -89,14 +89,14 @@ static void tratar_comando_q(char *params, HashFile hf_quadras)
 static void tratar_comando_cq(char *params)
 {
     /* cq sw cfill cstrk */
-    double sw = 1.0;
-    char cfill[32] = {0};
-    char cstrk[32] = {0};
+    char *sw_t = strtok(params, " \t");
+    char *fill_t = strtok(NULL, " \t");
+    char *strk_t = strtok(NULL, " \t");
 
-    if (sscanf(params, "%lf %31s %31s", &sw, cfill, cstrk) == 3)
+    if (sw_t && fill_t && strk_t)
     {
-        estilo_padrao.sw = sw;
-        strncpy(estilo_padrao.cfill, cfill, sizeof(estilo_padrao.cfill) - 1);
-        strncpy(estilo_padrao.cstrk, cstrk, sizeof(estilo_padrao.cstrk) - 1);
+        estilo_padrao.sw = atof(sw_t);
+        strncpy(estilo_padrao.cfill, fill_t, sizeof(estilo_padrao.cfill) - 1);
+        strncpy(estilo_padrao.cstrk, strk_t, sizeof(estilo_padrao.cstrk) - 1);
     }
 }

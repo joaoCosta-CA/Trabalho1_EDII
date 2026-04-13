@@ -38,4 +38,11 @@ void svg_fechar(FILE* f);
  */
 void svg_gerar_quadras(HashFile hf_quadras, FILE* svg_file);
 
+/**
+ * @brief Itera sobre uma lista de strings SVG e escreve no final do arquivo.
+ * @param decoracoes Lista de strings
+ * @param f Arquivo SVG aberto
+ */
+void svg_gerar_decoracoes(void* decoracoes, FILE* f);
+
 #endif // SVG_H

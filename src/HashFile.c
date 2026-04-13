@@ -10,7 +10,7 @@
 typedef struct
 {
     char key[KEY_SIZE];
-    char data[200];
+    char data[450];
 } Record;
 
 typedef struct
@@ -63,6 +63,8 @@ static void internal_redistribute(FILE *fp, long old_offset, long new_offset, in
 {
 
     Bucket old_b, new_b;
+    memset(&new_b, 0, sizeof(Bucket));
+
     fseek(fp, old_offset, SEEK_SET);
     fread(&old_b, sizeof(Bucket), 1, fp);
 
@@ -70,6 +72,7 @@ static void internal_redistribute(FILE *fp, long old_offset, long new_offset, in
     new_b.count = 0;
 
     Record staying[BUCKET_SIZE];
+    memset(staying, 0, sizeof(staying));
     int s_count = 0;
 
     for (int i = 0; i < old_b.count; i++)
@@ -142,8 +145,13 @@ HashFile hash_open(const char *dat_path, const char *idx_path)
     hf->idx_path[255] = '\0';
 
     hf->fp = fopen(dat_path, "rb+");
-    if (!hf->fp)
+    FILE *fidx = fopen(idx_path, "rb");
+
+    if (!hf->fp || !fidx)
     {
+        if (hf->fp) fclose(hf->fp);
+        if (fidx) fclose(fidx);
+
         hf->fp = fopen(dat_path, "wb+");
         hf->dir = malloc(sizeof(Directory));
         hf->dir->global_depth = 0;
@@ -158,7 +166,6 @@ HashFile hash_open(const char *dat_path, const char *idx_path)
     }
     else
     {
-        FILE *fidx = fopen(idx_path, "rb");
         hf->dir = malloc(sizeof(Directory));
         fread(&hf->dir->global_depth, sizeof(int), 1, fidx);
         int size = 1 << hf->dir->global_depth;
@@ -190,8 +197,8 @@ int hash_insert(HashFile hf, const char *key, const char *value)
     {
         strncpy(b.records[b.count].key, key, KEY_SIZE - 1);
         b.records[b.count].key[KEY_SIZE - 1] = '\0';
-        strncpy(b.records[b.count].data, value, 199);
-        b.records[b.count].data[199] = '\0';
+        strncpy(b.records[b.count].data, value, 449);
+        b.records[b.count].data[449] = '\0';
         b.count++;
         fseek(ihf->fp, offset, SEEK_SET);
         fwrite(&b, sizeof(Bucket), 1, ihf->fp);
@@ -288,7 +295,7 @@ int hash_remove(HashFile hf, const char *key)
     return 0;
 }
 
-int hash_get_global_depth(HashFile hf)
+static int hash_get_global_depth(HashFile hf)
 {
     InternalHashFile *ihf = (InternalHashFile *)hf;
 
@@ -316,8 +323,8 @@ int hash_update(HashFile hf, const char *key, const char *new_value)
     {
         if (strcmp(b.records[i].key, key) == 0)
         {
-            strncpy(b.records[i].data, new_value, 199);
-            b.records[i].data[199] = '\0';
+            strncpy(b.records[i].data, new_value, 449);
+            b.records[i].data[449] = '\0';
             fseek(ihf->fp, offset, SEEK_SET);
             fwrite(&b, sizeof(Bucket), 1, ihf->fp);
             return 1;
@@ -367,4 +374,101 @@ void hash_forall(HashFile hf, void (*callback)(const char *key, const char *valu
     }
 
     free(visited_offsets);
+}
+
+void hash_dump(HashFile hf, const char *hfd_path)
+{
+    InternalHashFile *ihf = (InternalHashFile *)hf;
+    if (!ihf || !ihf->dir || !hfd_path)
+        return;
+
+    FILE *out = fopen(hfd_path, "w");
+    if (!out)
+        return;
+
+    Directory *dir = ihf->dir;
+    int num_indices = 1 << dir->global_depth;
+
+    /* ---- Cabeçalho ---- */
+    fprintf(out, "=======================================\n");
+    fprintf(out, "  HashFile Dump\n");
+    fprintf(out, "  Global Depth   : %d\n", dir->global_depth);
+    fprintf(out, "  Directory Size : %d\n", num_indices);
+    fprintf(out, "=======================================\n\n");
+
+    /* ---- Diretório ---- */
+    fprintf(out, "--- Directory ---\n");
+
+    /* Conta quantas vezes cada offset aparece para marcar compartilhados */
+    for (int i = 0; i < num_indices; i++)
+    {
+        long off = dir->bucket_offsets[i];
+        /* Verifica se já apareceu antes */
+        int shared = 0;
+        for (int j = 0; j < i; j++)
+        {
+            if (dir->bucket_offsets[j] == off)
+            {
+                shared = 1;
+                break;
+            }
+        }
+        if (shared)
+            fprintf(out, "  [%d] -> offset %-8ld (compartilhado)\n", i, off);
+        else
+            fprintf(out, "  [%d] -> offset %-8ld\n", i, off);
+    }
+
+    /* ---- Buckets físicos (sem repetição) ---- */
+    fprintf(out, "\n--- Buckets ---\n");
+
+    /* Aloca array de offsets visitados (mesmo padrão de hash_forall) */
+    long *visited = malloc(sizeof(long) * (num_indices > 0 ? num_indices : 1));
+    int visited_count = 0;
+
+    for (int i = 0; i < num_indices; i++)
+    {
+        long current_offset = dir->bucket_offsets[i];
+
+        /* Pula se já imprimimos este bucket */
+        int already = 0;
+        for (int j = 0; j < visited_count; j++)
+        {
+            if (visited[j] == current_offset)
+            {
+                already = 1;
+                break;
+            }
+        }
+        if (already)
+            continue;
+
+        visited[visited_count++] = current_offset;
+
+        Bucket b;
+        fseek(ihf->fp, current_offset, SEEK_SET);
+        if (fread(&b, sizeof(Bucket), 1, ihf->fp) != 1)
+        {
+            fprintf(out, "\nBucket @ offset %ld  [ERRO DE LEITURA]\n", current_offset);
+            continue;
+        }
+
+        fprintf(out, "\nBucket @ offset %ld\n", current_offset);
+        fprintf(out, "  Local Depth : %d\n", b.local_depth);
+        fprintf(out, "  Count       : %d / %d\n", b.count, BUCKET_SIZE);
+
+        for (int r = 0; r < b.count; r++)
+        {
+            fprintf(out, "  [%d] key=\"%s\" | data=\"%s\"\n",
+                    r, b.records[r].key, b.records[r].data);
+        }
+
+        if (b.count == 0)
+            fprintf(out, "  (bucket vazio)\n");
+    }
+
+    fprintf(out, "\n=======================================\n");
+
+    free(visited);
+    fclose(out);
 }

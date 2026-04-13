@@ -52,13 +52,6 @@ int hash_search(HashFile hf, const char* key, char* out_buffer, int buffer_size)
 int hash_remove(HashFile hf, const char* key);
 
 /**
- * @brief Retorna a profundidade global atual do diretório.
- * @param hf: Instância do HashFile.
- * @return Valor inteiro da profundidade global.
- */
-int hash_get_global_depth(HashFile hf); // ---------> colocar como função static, não faz sentido o usuário acessar isso.
-
-/**
  * @brief Atualiza o valor associado com a chave fornecida.
  * @param hf: Instância da HashFile.
  * @param key: Chave string do registro a ser atualizado.
@@ -75,5 +68,14 @@ int hash_update(HashFile hf, const char* key, const char *new_value);
  * @param userdata Ponteiro arbitrário repassado para o callback.
  */
 void hash_forall(HashFile hf, void (*callback)(const char* key, const char* value, void *userdata), void *userdata);
+
+/**
+ * @brief Gera um arquivo de dump legível (.hfd) com o estado interno da Hash.
+ *        Exibe a profundidade global, o diretório de offsets e o conteúdo de
+ *        cada bucket físico (sem repetir buckets compartilhados).
+ * @param hf       Instância do HashFile.
+ * @param hfd_path Caminho de destino do arquivo de dump.
+ */
+void hash_dump(HashFile hf, const char *hfd_path);
 
 #endif // HASH_FILE_H

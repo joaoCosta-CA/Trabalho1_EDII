@@ -12,9 +12,10 @@ typedef void* LeitorQry;
 /**
 *@brief Função que será usada para a leitura dos comandos dos arquivos do .qry.
 *@param diretorio_base: caminho do arquivo que será usado para a consulta.
-*@param nome_arquivo: nome do arquivo que será usado para a consulta.
-*@param hf_quadras: HashFile que contém as quadras para alteração.
+*@param hf_pessoas: HashFile que contém as pessoas para alteração e consulta.
+*@param dir_saida: diretório onde será salvo o relatório de output.
+*@param nome_base: nome base derivado do arquivo geo para geração do relatório txt.
 */
-LeitorQry leitor_qry(const char* diretorio_base, const char* nome_arquivo, HashFile hf_quadras);
+LeitorQry leitor_qry(const char* diretorio_base, const char* nome_arquivo, HashFile hf_quadras, HashFile hf_pessoas, const char* dir_saida, const char* nome_base);
 
 #endif // LEITOR_QRY_H

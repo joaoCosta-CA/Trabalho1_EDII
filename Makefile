@@ -79,6 +79,8 @@ dirs:
 # --- Limpeza ------------------------------------------------
 clean:
 	rm -f $(MOD_OBJS) $(TARGET) $(TEST_BIN)
-	rm -f *.hf *.hfc *.hfd *.dat *.idx
+	rm -f *.hf *.hfc *.hfd *.dat *.idx *.svg *.txt
 	rm -f $(TEST_DIR)/*.dat $(TEST_DIR)/*.idx
+	find $(OUT_DIR) -type f \( -name "*.svg" -o -name "*.hf" -o -name "*.hfc" -o -name "*.hfd" -o -name "*.dat" -o -name "*.idx" -o -name "*.txt" \) -delete 2>/dev/null || true
 	@echo "=== Limpo ==="
+
