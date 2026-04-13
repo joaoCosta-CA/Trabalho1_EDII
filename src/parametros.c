@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "parametros.h"
+#include "parametros/parametros.h"
 
 typedef struct
 {

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "HashFile.h"
+#include "estr_dados/Include_HashFile/HashFile.h"
 
 // --- Definições Internas (Privadas) ---
 #define BUCKET_SIZE 3

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "pessoa.h"
+#include "mundo/Include_pessoa/pessoa.h"
 
 typedef struct {
     char cpf[18];

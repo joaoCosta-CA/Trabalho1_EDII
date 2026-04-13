@@ -56,7 +56,7 @@ int hash_remove(HashFile hf, const char* key);
  * @param hf: Instância do HashFile.
  * @return Valor inteiro da profundidade global.
  */
-int hash_get_global_depth(HashFile hf);
+int hash_get_global_depth(HashFile hf); // ---------> colocar como função static, não faz sentido o usuário acessar isso.
 
 /**
  * @brief Atualiza o valor associado com a chave fornecida.

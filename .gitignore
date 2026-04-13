@@ -1,0 +1,30 @@
+# Arquivos objeto e binários
+*.o
+*.out
+*.exe
+
+# Arquivos de banco de dados e índices
+*.hf
+*.hfc
+*.hfd
+*.dat
+*.idx
+
+# Executáveis principais e de testes (binários gerados)
+ted
+run_tests
+run_tests_pessoa
+tests/run_tests
+tests/run_tests_pessoa
+
+# Entradas e Saídas / Documentos ignorados
+*.pdf
+*.pm
+*.qry
+*.geo
+*.svg
+*.txt
+
+# Pastas de saída
+outputs/
+saida/

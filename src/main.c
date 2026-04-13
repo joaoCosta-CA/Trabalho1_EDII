@@ -18,11 +18,12 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include "includes/parametros/parametros.h"
-#include "includes/estr_dados/Include_HashFile/HashFile.h"
-#include "includes/leitores/Include_leitorGeo/leitor_geo.h"
-#include "includes/leitores/Include_leitorPm/leitorPM.h"
-#include "includes/svg/svg.h"
+#include "parametros/parametros.h"
+#include "estr_dados/Include_HashFile/HashFile.h"
+#include "leitores/Include_leitorGeo/leitor_geo.h"
+#include "leitores/Include_leitorPm/leitorPM.h"
+#include "leitores/Include_leitorQry/leitorQry.h"
+#include "svg/svg.h"
 
 /**
  * Monta o caminho completo de um arquivo de saída no diretório BSD.
@@ -122,7 +123,8 @@ int main(int argc, char *argv[])
     if (arq_qry)
     {
         printf("Processando arquivo .qry: %s\n", arq_qry);
-        /* TODO: ler_arquivo_qry(dir_entrada, arq_qry, hf_quadras, hf_pessoas, dir_saida, nome_base); */
+        /* leitor_qry processa comandos e altera o estado em hf_quadras */
+        leitor_qry(dir_entrada, arq_qry, hf_quadras);
     }
 
     /* --- 6. Gerar SVG Base --- */
@@ -130,7 +132,17 @@ int main(int argc, char *argv[])
     monta_caminho_saida(dir_saida, nome_base, "-quadras.svg", path_svg, sizeof(path_svg));
     printf("Gerando SVG das quadras em: %s\n", path_svg);
     
-    FILE* f_svg = svg_iniciar(path_svg);
+    double min_x, min_y, max_x, max_y;
+    svg_calcular_bbox(hf_quadras, &min_x, &min_y, &max_x, &max_y);
+    
+    // Adiciona uma margem para evitar cortes na borda das figuras
+    double margin = 20.0;
+    double vw = (max_x - min_x) + 2 * margin;
+    double vh = (max_y - min_y) + 2 * margin;
+    double vx = min_x - margin;
+    double vy = min_y - margin;
+
+    FILE* f_svg = svg_iniciar(path_svg, vx, vy, vw, vh);
     if (f_svg) {
         svg_gerar_quadras(hf_quadras, f_svg);
         svg_fechar(f_svg);

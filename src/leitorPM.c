@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "leitorPM.h"
+#include "leitores/Include_leitorPm/leitorPM.h"
 
 static void tratar_comando_p(char *params, HashFile hf)
 {

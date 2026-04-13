@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "leitor_geo.h"
+#include "leitores/Include_leitorGeo/leitor_geo.h"
 
 typedef struct
 {

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "quadra.h"
+#include "mundo/Include_quadra/quadra.h"
 
 typedef struct {
     char cep[30];
