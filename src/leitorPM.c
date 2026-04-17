@@ -29,7 +29,7 @@ static void tratar_comando_m(char *params, HashFile hf)
     /* Tenta ler os atributos principais da mudança */
     if (sscanf(params, "%29s %49s %c %d %n", cpf, cep, &face, &num, &bytes_lidos) >= 4)
     {
-        char compl[100] = {0};
+        char compl[300] = {0};
         if (params[bytes_lidos] != '\0')
         {
             strncpy(compl, params + bytes_lidos, sizeof(compl) - 1);
@@ -56,8 +56,8 @@ static void tratar_comando_m(char *params, HashFile hf)
             if (token) strncpy(nasc, token, 19);
 
             /* Remonta a string de dados combinando a pessoa com seu novo endereço */
-            char nova_string[200];
-            snprintf(nova_string, sizeof(nova_string), "%s;%s;%c;%s;%s;%c;%d;%s",
+            char nova_string[400];
+            snprintf(nova_string, sizeof(nova_string), "%s;%s;%c;%s;%s;%c;%d;%.200s",
                      nome, sobrenome, sexo, nasc, cep, face, num, compl);
             
             /* Grava no HashFile o dado de morador */

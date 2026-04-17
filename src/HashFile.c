@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "estr_dados/Include_HashFile/HashFile.h"
+#include "../includes/estr_dados/Include_HashFile/HashFile.h"
 
 // --- Definições Internas (Privadas) ---
 #define BUCKET_SIZE 3
@@ -295,16 +295,16 @@ int hash_remove(HashFile hf, const char *key)
     return 0;
 }
 
-static int hash_get_global_depth(HashFile hf)
-{
-    InternalHashFile *ihf = (InternalHashFile *)hf;
+// static int hash_get_global_depth(HashFile hf)
+// {
+//     InternalHashFile *ihf = (InternalHashFile *)hf;
 
-    if (hf == NULL || ihf->dir == NULL)
-    {
-        return -1;
-    }
-    return ihf->dir->global_depth;
-}
+//     if (hf == NULL || ihf->dir == NULL)
+//     {
+//         return -1;
+//     }
+//     return ihf->dir->global_depth;
+// }
 
 int hash_update(HashFile hf, const char *key, const char *new_value)
 {
@@ -376,53 +376,78 @@ void hash_forall(HashFile hf, void (*callback)(const char *key, const char *valu
     free(visited_offsets);
 }
 
+static void write_utf16le_string(FILE *f, const char *str)
+{
+    for (int i = 0; str[i]; i++) {
+        unsigned char c = (unsigned char)str[i];
+        fputc(c, f);
+        fputc(0, f);
+    }
+}
+
 void hash_dump(HashFile hf, const char *hfd_path)
 {
     InternalHashFile *ihf = (InternalHashFile *)hf;
     if (!ihf || !ihf->dir || !hfd_path)
         return;
 
-    FILE *out = fopen(hfd_path, "w");
+    FILE *out = fopen(hfd_path, "wb");
     if (!out)
         return;
 
     Directory *dir = ihf->dir;
     int num_indices = 1 << dir->global_depth;
 
-    /* ---- Cabeçalho ---- */
-    fprintf(out, "=======================================\n");
-    fprintf(out, "  HashFile Dump\n");
-    fprintf(out, "  Global Depth   : %d\n", dir->global_depth);
-    fprintf(out, "  Directory Size : %d\n", num_indices);
-    fprintf(out, "=======================================\n\n");
+    /* BOM UTF-16LE */
+    unsigned char bom[] = {0xFF, 0xFE};
+    fwrite(bom, 1, 2, out);
 
-    /* ---- Diretório ---- */
-    fprintf(out, "--- Directory ---\n");
+    char buf[1024];
 
-    /* Conta quantas vezes cada offset aparece para marcar compartilhados */
+    /* "DUMP\r\n" */
+    write_utf16le_string(out, "DUMP\r\n");
+
+    /* *Dump cabecalho */
+    write_utf16le_string(out, "*Dump cabecalho\r\n");
+    
+    snprintf(buf, sizeof(buf), "numBucketsd %d \r\n", num_indices);
+    write_utf16le_string(out, buf);
+    
+    snprintf(buf, sizeof(buf), "sizeRecordd %d \r\n", KEY_SIZE);
+    write_utf16le_string(out, buf);
+    
+    snprintf(buf, sizeof(buf), "sizeBlock 2048 \r\n");
+    write_utf16le_string(out, buf);
+    
+    snprintf(buf, sizeof(buf), "offsetKey 0 \r\n");
+    write_utf16le_string(out, buf);
+    
+    snprintf(buf, sizeof(buf), "sizeKey 4 \r\n");
+    write_utf16le_string(out, buf);
+    
+    snprintf(buf, sizeof(buf), "offsetTable 46 \r\n");
+    write_utf16le_string(out, buf);
+    
+    snprintf(buf, sizeof(buf), "offsetBuckets %ld \r\n", 
+             (long)(46 + num_indices * 8));
+    write_utf16le_string(out, buf);
+    
+    snprintf(buf, sizeof(buf), "offsetOverflow -1\r\n");
+    write_utf16le_string(out, buf);
+
+    /* *Dump table */
+    write_utf16le_string(out, "* Dump table\r\n");
+
     for (int i = 0; i < num_indices; i++)
     {
-        long off = dir->bucket_offsets[i];
-        /* Verifica se já apareceu antes */
-        int shared = 0;
-        for (int j = 0; j < i; j++)
-        {
-            if (dir->bucket_offsets[j] == off)
-            {
-                shared = 1;
-                break;
-            }
-        }
-        if (shared)
-            fprintf(out, "  [%d] -> offset %-8ld (compartilhado)\n", i, off);
-        else
-            fprintf(out, "  [%d] -> offset %-8ld\n", i, off);
+        snprintf(buf, sizeof(buf), "[%d] %ld\r\n", i, dir->bucket_offsets[i]);
+        write_utf16le_string(out, buf);
     }
 
-    /* ---- Buckets físicos (sem repetição) ---- */
-    fprintf(out, "\n--- Buckets ---\n");
+    /* *Dump buckets */
+    write_utf16le_string(out, "*Dump buckets\r\n");
 
-    /* Aloca array de offsets visitados (mesmo padrão de hash_forall) */
+    /* Aloca array de offsets visitados */
     long *visited = malloc(sizeof(long) * (num_indices > 0 ? num_indices : 1));
     int visited_count = 0;
 
@@ -448,26 +473,20 @@ void hash_dump(HashFile hf, const char *hfd_path)
         Bucket b;
         fseek(ihf->fp, current_offset, SEEK_SET);
         if (fread(&b, sizeof(Bucket), 1, ihf->fp) != 1)
-        {
-            fprintf(out, "\nBucket @ offset %ld  [ERRO DE LEITURA]\n", current_offset);
             continue;
-        }
 
-        fprintf(out, "\nBucket @ offset %ld\n", current_offset);
-        fprintf(out, "  Local Depth : %d\n", b.local_depth);
-        fprintf(out, "  Count       : %d / %d\n", b.count, BUCKET_SIZE);
+        snprintf(buf, sizeof(buf), "BLOCO: %d\r\n", i);
+        write_utf16le_string(out, buf);
 
         for (int r = 0; r < b.count; r++)
         {
-            fprintf(out, "  [%d] key=\"%s\" | data=\"%s\"\n",
-                    r, b.records[r].key, b.records[r].data);
+            snprintf(buf, sizeof(buf), "%d | %s | %s | 0.000000 |\r\n",
+                    1, b.records[r].key, b.records[r].data);
+            write_utf16le_string(out, buf);
         }
-
-        if (b.count == 0)
-            fprintf(out, "  (bucket vazio)\n");
     }
 
-    fprintf(out, "\n=======================================\n");
+    write_utf16le_string(out, "FIM DUMP");
 
     free(visited);
     fclose(out);
