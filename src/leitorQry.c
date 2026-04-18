@@ -11,6 +11,9 @@ typedef struct
     HashFile hf_quadras;
     HashFile hf_pessoas;
     Lista decoracoes;
+    char ultima_pq[50];           // Rastreia a última quadra consultada com pq
+    char ultimo_cpf_op[50];       // CPF da última operação (nasc/rip/dspj)
+    char ultima_operacao[10];     // Tipo da última operação
 } CtxQry;
 
 typedef struct
@@ -73,11 +76,12 @@ typedef struct
     int sem_teto_f;
 } CensoState;
 
-static void censo_callback(const char *key, const char *value, void *userdata){
+static void censo_callback(const char *key, const char *value, void *userdata)
+{
     (void)key;
     CensoState *state = (CensoState *)userdata;
     state->total_habitantes++;
-    
+
     char buffer[256];
     strncpy(buffer, value, sizeof(buffer) - 1);
     buffer[255] = '\0';
@@ -207,8 +211,7 @@ static void tratar_comando_qry(char *comando, char *params, CtxQry *ctx)
                 double qh = t ? atof(t) : 0;
 
                 char *svg_str = malloc(512);
-                snprintf(svg_str, 512, "<line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"red\" stroke-width=\"2\"/>\n"
-                                       "<line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"red\" stroke-width=\"2\"/>",
+                snprintf(svg_str, 512, "<svg:line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"red\" stroke-width=\"2\"/><svg:line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"red\" stroke-width=\"2\"/>",
                          qx, qy, qx + qw, qy + qh,
                          qx + qw, qy, qx, qy + qh);
                 insert(ctx->decoracoes, svg_str);
@@ -231,6 +234,10 @@ static void tratar_comando_qry(char *comando, char *params, CtxQry *ctx)
         char cep[50];
         if (sscanf(params, "%s", cep) == 1)
         {
+            // Rastrear última quadra consultada
+            strncpy(ctx->ultima_pq, cep, 49);
+            ctx->ultima_pq[49] = '\0';
+
             char buffer_quadra[300];
             if (hash_search(ctx->hf_quadras, cep, buffer_quadra, sizeof(buffer_quadra)))
             {
@@ -252,18 +259,18 @@ static void tratar_comando_qry(char *comando, char *params, CtxQry *ctx)
 
                 char *svg_str = malloc(2048);
                 snprintf(svg_str, 2048,
-                         "<g>\n"
-                         "<circle cx=\"%f\" cy=\"%f\" r=\"7\" fill=\"white\" />\n"
-                         "<text x=\"%f\" y=\"%f\" font-size=\"10\" fill=\"black\" text-anchor=\"middle\" alignment-baseline=\"middle\" font-weight=\"bold\">%d</text>\n"
-                         "<circle cx=\"%f\" cy=\"%f\" r=\"5\" fill=\"white\" />\n"
-                         "<text x=\"%f\" y=\"%f\" font-size=\"8\" fill=\"blue\" text-anchor=\"middle\" alignment-baseline=\"middle\">%d</text>\n"
-                         "<circle cx=\"%f\" cy=\"%f\" r=\"5\" fill=\"white\" />\n"
-                         "<text x=\"%f\" y=\"%f\" font-size=\"8\" fill=\"blue\" text-anchor=\"middle\" alignment-baseline=\"middle\">%d</text>\n"
-                         "<circle cx=\"%f\" cy=\"%f\" r=\"5\" fill=\"white\" />\n"
-                         "<text x=\"%f\" y=\"%f\" font-size=\"8\" fill=\"blue\" text-anchor=\"middle\" alignment-baseline=\"middle\">%d</text>\n"
-                         "<circle cx=\"%f\" cy=\"%f\" r=\"5\" fill=\"white\" />\n"
-                         "<text x=\"%f\" y=\"%f\" font-size=\"8\" fill=\"blue\" text-anchor=\"middle\" alignment-baseline=\"middle\">%d</text>\n"
-                         "</g>",
+                         "<svg:g>\n"
+                         "<svg:circle cx=\"%f\" cy=\"%f\" r=\"7\" fill=\"white\" />\n"
+                         "<svg:text x=\"%f\" y=\"%f\" font-size=\"10\" fill=\"black\" text-anchor=\"middle\" alignment-baseline=\"middle\" font-weight=\"bold\">%d</svg:text>\n"
+                         "<svg:circle cx=\"%f\" cy=\"%f\" r=\"5\" fill=\"white\" />\n"
+                         "<svg:text x=\"%f\" y=\"%f\" font-size=\"8\" fill=\"blue\" text-anchor=\"middle\" alignment-baseline=\"middle\">%d</svg:text>\n"
+                         "<svg:circle cx=\"%f\" cy=\"%f\" r=\"5\" fill=\"white\" />\n"
+                         "<svg:text x=\"%f\" y=\"%f\" font-size=\"8\" fill=\"blue\" text-anchor=\"middle\" alignment-baseline=\"middle\">%d</svg:text>\n"
+                         "<svg:circle cx=\"%f\" cy=\"%f\" r=\"5\" fill=\"white\" />\n"
+                         "<svg:text x=\"%f\" y=\"%f\" font-size=\"8\" fill=\"blue\" text-anchor=\"middle\" alignment-baseline=\"middle\">%d</svg:text>\n"
+                         "<svg:circle cx=\"%f\" cy=\"%f\" r=\"5\" fill=\"white\" />\n"
+                         "<svg:text x=\"%f\" y=\"%f\" font-size=\"8\" fill=\"blue\" text-anchor=\"middle\" alignment-baseline=\"middle\">%d</svg:text>\n"
+                         "</svg:g>",
                          qx + qw / 2.0, qy + qh / 2.0, qx + qw / 2.0, qy + qh / 2.0, st.count,
                          qx + qw / 2.0, qy + qh - 5.0, qx + qw / 2.0, qy + qh - 5.0, st.count_n,
                          qx + qw / 2.0, qy + 5.0, qx + qw / 2.0, qy + 5.0, st.count_s,
@@ -281,7 +288,7 @@ static void tratar_comando_qry(char *comando, char *params, CtxQry *ctx)
     {
         CensoState st = {0, 0, 0, 0, 0, 0, 0, 0, 0};
         hash_forall(ctx->hf_pessoas, censo_callback, &st);
-        
+
         double prop_moradores = st.total_habitantes > 0 ? (double)st.moradores / st.total_habitantes : 0.0;
         double pct_hab_m = st.total_habitantes > 0 ? (double)st.total_m * 100.0 / st.total_habitantes : 0.0;
         double pct_hab_f = st.total_habitantes > 0 ? (double)st.total_f * 100.0 / st.total_habitantes : 0.0;
@@ -289,7 +296,7 @@ static void tratar_comando_qry(char *comando, char *params, CtxQry *ctx)
         double pct_mor_f = st.moradores > 0 ? (double)st.moradores_f * 100.0 / st.moradores : 0.0;
         double pct_sem_teto_m = st.sem_teto > 0 ? (double)st.sem_teto_m * 100.0 / st.sem_teto : 0.0;
         double pct_sem_teto_f = st.sem_teto > 0 ? (double)st.sem_teto_f * 100.0 / st.sem_teto : 0.0;
-        
+
         fprintf(ctx->f_txt, "censo:\n");
         fprintf(ctx->f_txt, "  Total de habitantes: %d\n", st.total_habitantes);
         fprintf(ctx->f_txt, "  Total de moradores: %d\n", st.moradores);
@@ -330,17 +337,23 @@ static void tratar_comando_qry(char *comando, char *params, CtxQry *ctx)
     }
     else if (strcmp(comando, "nasc") == 0)
     {
-        char cpf[50], nome[50], sobrenome[50], sexo[5], nasc[50], cep[50], face[5], compl[50];
-        int num = 0;
-        // nasc cpf nome sobrenome sexo data cep face num compl
-        if (sscanf(params, "%s %s %s %s %s %s %s %d %s", cpf, nome, sobrenome, sexo, nasc, cep, face, &num, compl) >= 8)
+        char cpf[50], nome[50], sobrenome[50], sexo[5], nasc[50];
+        // nasc cpf nome sobrenome sexo data
+        if (sscanf(params, "%s %s %s %s %s", cpf, nome, sobrenome, sexo, nasc) >= 5)
         {
+            // Pessoa nascida será armazenada sem endereço (CEP vazio)
             char nova_string[300];
-            snprintf(nova_string, sizeof(nova_string), "%s;%s;%s;%s;%s;%s;%d;%s",
-                     nome, sobrenome, sexo, nasc, cep, face, num, compl);
+            snprintf(nova_string, sizeof(nova_string), "%s;%s;%s;%s;;;;;;",
+                     nome, sobrenome, sexo, nasc);
             if (hash_insert(ctx->hf_pessoas, cpf, nova_string))
             {
-                fprintf(ctx->f_txt, "nasc: Pessoa %s (%s) registrada no endereço %s\n", cpf, nome, cep);
+                // Rastrear para legenda
+                strncpy(ctx->ultimo_cpf_op, cpf, 49);
+                ctx->ultimo_cpf_op[49] = '\0';
+                strncpy(ctx->ultima_operacao, "nasc", 9);
+                ctx->ultima_operacao[9] = '\0';
+
+                fprintf(ctx->f_txt, "nasc: Pessoa %s (%s) registrada\n", cpf, nome);
             }
         }
     }
@@ -362,11 +375,17 @@ static void tratar_comando_qry(char *comando, char *params, CtxQry *ctx)
                 if (cep && face && num_s && calcular_coordenadas(ctx->hf_quadras, cep, face[0], atoi(num_s), &x, &y))
                 {
                     char *svg_str = malloc(256);
-                    snprintf(svg_str, 256, "<line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"red\" stroke-width=\"2\"/>"
-                                           "<line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"red\" stroke-width=\"2\"/>",
+                    snprintf(svg_str, 256, "<svg:line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"red\" stroke-width=\"2\"/><svg:line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"red\" stroke-width=\"2\"/>",
                              x - 5, y, x + 5, y, x, y - 5, x, y + 5);
                     insert(ctx->decoracoes, svg_str);
                 }
+
+                // Rastrear para legenda
+                strncpy(ctx->ultimo_cpf_op, cpf, 49);
+                ctx->ultimo_cpf_op[49] = '\0';
+                strncpy(ctx->ultima_operacao, "rip", 9);
+                ctx->ultima_operacao[9] = '\0';
+
                 hash_remove(ctx->hf_pessoas, cpf);
                 fprintf(ctx->f_txt, "rip: Morador %s (CPF %s) faleceu.\n", nome, cpf);
             }
@@ -392,14 +411,109 @@ static void tratar_comando_qry(char *comando, char *params, CtxQry *ctx)
 
                 hash_update(ctx->hf_pessoas, cpf, nova_string);
 
-                double x = 0, y = 0;
-                if (calcular_coordenadas(ctx->hf_quadras, novo_cep, nova_face[0], novo_num, &x, &y))
+                // ========== ORIGEM (última quadra consultada com pq) ==========
+                if (ctx->ultima_pq[0] != '\0')
                 {
-                    char *svg_str = malloc(512);
-                    snprintf(svg_str, 512, "<rect x=\"%f\" y=\"%f\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"red\"/>\n"
-                                           "<text x=\"%f\" y=\"%f\" fill=\"red\" font-size=\"10\">%s</text>",
-                             x - 10, y - 10, x - 10, y - 12, cpf);
-                    insert(ctx->decoracoes, svg_str);
+                    char buffer_quad_origem[300];
+                    if (hash_search(ctx->hf_quadras, ctx->ultima_pq, buffer_quad_origem, sizeof(buffer_quad_origem)))
+                    {
+                        char *t = strtok(buffer_quad_origem, ";");
+                        t = strtok(NULL, ";");
+                        double qx_orig = t ? atof(t) : 0;
+                        t = strtok(NULL, ";");
+                        double qy_orig = t ? atof(t) : 0;
+                        t = strtok(NULL, ";");
+                        double qw_orig = t ? atof(t) : 0;
+                        t = strtok(NULL, ";");
+                        double qh_orig = t ? atof(t) : 0;
+
+                        // Gerar quadrados nos vértices da origem (face S)
+                        char *svg_orig1 = malloc(256);
+                        snprintf(svg_orig1, 256, "<svg:rect width=\"10.000000\" height=\"10.000000\" x=\"%f\" y=\"%f\" fill=\"red\" stroke=\"red\" stroke-width=\"1\" fill-opacity=\"0.300000\" rx=\"0.000000\" ry=\"0.000000\" stroke-dasharray=\"1, 1\" />",
+                                 qx_orig - 5, qy_orig + qh_orig - 5);
+                        insert(ctx->decoracoes, svg_orig1);
+
+                        char *svg_orig2 = malloc(256);
+                        snprintf(svg_orig2, 256, "<svg:rect width=\"10.000000\" height=\"10.000000\" x=\"%f\" y=\"%f\" fill=\"red\" stroke=\"red\" stroke-width=\"1\" fill-opacity=\"0.300000\" rx=\"0.000000\" ry=\"0.000000\" stroke-dasharray=\"1, 1\" />",
+                                 qx_orig + qw_orig - 5, qy_orig + qh_orig - 5);
+                        insert(ctx->decoracoes, svg_orig2);
+
+                        // Gerar quadrado maior no centro da origem
+                        char *svg_orig3 = malloc(256);
+                        snprintf(svg_orig3, 256, "<svg:rect width=\"15.000000\" height=\"15.000000\" x=\"%f\" y=\"%f\" fill=\"red\" stroke=\"red\" stroke-width=\"1\" fill-opacity=\"0.300000\" rx=\"0.000000\" ry=\"0.000000\" stroke-dasharray=\"1, 1\" />",
+                                 qx_orig + qw_orig / 2.0 - 7.5, qy_orig + qh_orig - 7.5);
+                        insert(ctx->decoracoes, svg_orig3);
+                    }
+                }
+
+                // ========== DESTINO ==========
+                char buffer_quad_dest[300];
+                if (hash_search(ctx->hf_quadras, novo_cep, buffer_quad_dest, sizeof(buffer_quad_dest)))
+                {
+                    char *t = strtok(buffer_quad_dest, ";");
+                    t = strtok(NULL, ";");
+                    double qx_dest = t ? atof(t) : 0;
+                    t = strtok(NULL, ";");
+                    double qy_dest = t ? atof(t) : 0;
+                    t = strtok(NULL, ";");
+                    double qw_dest = t ? atof(t) : 0;
+                    t = strtok(NULL, ";");
+                    double qh_dest = t ? atof(t) : 0;
+
+                    double v1x, v1y, v2x, v2y, center_x, center_y;
+                    char face_char = nova_face[0];
+
+                    if (face_char == 'N' || face_char == 'n')
+                    {
+                        v1x = qx_dest;
+                        v1y = qy_dest;
+                        v2x = qx_dest + qw_dest;
+                        v2y = qy_dest;
+                        center_x = qx_dest + qw_dest / 2.0;
+                        center_y = qy_dest;
+                    }
+                    else if (face_char == 'S' || face_char == 's')
+                    {
+                        v1x = qx_dest;
+                        v1y = qy_dest + qh_dest;
+                        v2x = qx_dest + qw_dest;
+                        v2y = qy_dest + qh_dest;
+                        center_x = qx_dest + qw_dest / 2.0;
+                        center_y = qy_dest + qh_dest;
+                    }
+                    else if (face_char == 'L' || face_char == 'l')
+                    {
+                        v1x = qx_dest;
+                        v1y = qy_dest;
+                        v2x = qx_dest;
+                        v2y = qy_dest + qh_dest;
+                        center_x = qx_dest;
+                        center_y = qy_dest + qh_dest / 2.0;
+                    }
+                    else // 'O' ou 'o'
+                    {
+                        v1x = qx_dest + qw_dest;
+                        v1y = qy_dest;
+                        v2x = qx_dest + qw_dest;
+                        v2y = qy_dest + qh_dest;
+                        center_x = qx_dest + qw_dest;
+                        center_y = qy_dest + qh_dest / 2.0;
+                    }
+
+                    char *svg_dest1 = malloc(256);
+                    snprintf(svg_dest1, 256, "<svg:rect width=\"10.000000\" height=\"10.000000\" x=\"%f\" y=\"%f\" fill=\"red\" stroke=\"red\" stroke-width=\"1\" fill-opacity=\"0.300000\" rx=\"0.000000\" ry=\"0.000000\" stroke-dasharray=\"1, 1\" />",
+                             v1x - 5, v1y - 5);
+                    insert(ctx->decoracoes, svg_dest1);
+
+                    char *svg_dest2 = malloc(256);
+                    snprintf(svg_dest2, 256, "<svg:rect width=\"10.000000\" height=\"10.000000\" x=\"%f\" y=\"%f\" fill=\"red\" stroke=\"red\" stroke-width=\"1\" fill-opacity=\"0.300000\" rx=\"0.000000\" ry=\"0.000000\" stroke-dasharray=\"1, 1\" />",
+                             v2x - 5, v2y - 5);
+                    insert(ctx->decoracoes, svg_dest2);
+
+                    char *svg_dest3 = malloc(256);
+                    snprintf(svg_dest3, 256, "<svg:rect width=\"15.000000\" height=\"15.000000\" x=\"%f\" y=\"%f\" fill=\"red\" stroke=\"red\" stroke-width=\"1\" fill-opacity=\"0.300000\" rx=\"0.000000\" ry=\"0.000000\" stroke-dasharray=\"1, 1\" />",
+                             center_x - 7.5, center_y - 7.5);
+                    insert(ctx->decoracoes, svg_dest3);
                 }
 
                 fprintf(ctx->f_txt, "mud: Morador %s (CPF %s) moveu-se para o CEP %s\n", nome, cpf, novo_cep);
@@ -418,6 +532,24 @@ static void tratar_comando_qry(char *comando, char *params, CtxQry *ctx)
                 char *sexo = strtok(NULL, ";");
                 char *nasc = strtok(NULL, ";");
                 char *cep = strtok(NULL, ";");
+                char *face = strtok(NULL, ";");
+                char *num_s = strtok(NULL, ";");
+
+                double x = 0, y = 0;
+                if (cep && face && num_s && calcular_coordenadas(ctx->hf_quadras, cep, face[0], atoi(num_s), &x, &y))
+                {
+                    char *svg_str = malloc(256);
+                    snprintf(svg_str, 256, "<svg:circle cx=\"%f\" cy=\"%f\" r=\"8\" fill=\"black\" stroke=\"black\" stroke-width=\"1\"/>",
+                             x, y);
+                    insert(ctx->decoracoes, svg_str);
+                }
+
+                // Rastrear para legenda
+                strncpy(ctx->ultimo_cpf_op, cpf, 49);
+                ctx->ultimo_cpf_op[49] = '\0';
+                strncpy(ctx->ultima_operacao, "dspj", 9);
+                ctx->ultima_operacao[9] = '\0';
+
                 fprintf(ctx->f_txt, "dspj: Morador CPF %s - %s %s, Sexo: %s, Nasc: %s, CEP antigo: %s DESPEJADO!\n",
                         cpf, nome, sobrenome, sexo, nasc, cep);
                 hash_remove(ctx->hf_pessoas, cpf);
@@ -455,6 +587,9 @@ LeitorQry leitor_qry(const char *diretorio_base, const char *nome_arquivo, HashF
     ctx.hf_quadras = hf_quadras;
     ctx.hf_pessoas = hf_pessoas;
     ctx.decoracoes = createList();
+    ctx.ultima_pq[0] = '\0';        // Inicializar rastreamento de última quadra
+    ctx.ultimo_cpf_op[0] = '\0';    // Inicializar rastreamento de último CPF
+    ctx.ultima_operacao[0] = '\0';  // Inicializar rastreamento de última operação
 
     char linha[1024];
     while (fgets(linha, sizeof(linha), arquivo))
@@ -473,6 +608,48 @@ LeitorQry leitor_qry(const char *diretorio_base, const char *nome_arquivo, HashF
     fclose(arquivo);
     if (f_txt)
         fclose(f_txt);
+
+    // Gerar legenda se houver operação rastreada
+    if (ctx.ultimo_cpf_op[0] != '\0')
+    {
+        char *box_color = "white";
+        char *text_symbol = "";
+        char *text_color = "black";
+
+        if (strncmp(ctx.ultima_operacao, "nasc", 4) == 0)
+        {
+            box_color = "#AAAAFF";
+            text_symbol = "***";
+            text_color = "#000080";
+        }
+        else if (strncmp(ctx.ultima_operacao, "rip", 3) == 0)
+        {
+            box_color = "black";
+            text_symbol = "R.I.P.";
+            text_color = "white";
+        }
+        else if (strncmp(ctx.ultima_operacao, "dspj", 4) == 0)
+        {
+            box_color = "#786721";
+            text_symbol = "OUT";
+            text_color = "#F4EED7";
+        }
+
+        char *svg_box = malloc(512);
+        snprintf(svg_box, 512, "<svg:rect width=\"100.000000\" height=\"50.000000\" x=\"1460.000000\" y=\"0.000000\" fill=\"%s\" stroke=\"black\" stroke-width=\"1\" fill-opacity=\"1.000000\" rx=\"20.000000\" ry=\"20.000000\" />",
+                 box_color);
+        insert(ctx.decoracoes, svg_box);
+
+        char *svg_text1 = malloc(256);
+        snprintf(svg_text1, 256, "   <svg:text x=\"1510.000000\" y=\"12.000000\" fill=\"%s\" stroke=\"%s\" font-size=\"14\" text-anchor=\"middle\">%s</svg:text>",
+                 text_color, text_color, text_symbol);
+        insert(ctx.decoracoes, svg_text1);
+
+        char *svg_text2 = malloc(256);
+        snprintf(svg_text2, 256, "   <svg:text x=\"1510.000000\" y=\"28.000000\" fill=\"%s\" stroke=\"%s\" font-size=\"9\" text-anchor=\"middle\">%s</svg:text>",
+                 text_color, text_color, ctx.ultimo_cpf_op);
+        insert(ctx.decoracoes, svg_text2);
+    }
 
     return ctx.decoracoes;
 }
