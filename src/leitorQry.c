@@ -393,9 +393,9 @@ static void tratar_comando_qry(char *comando, char *params, CtxQry *ctx)
     }
     else if (strcmp(comando, "mud") == 0)
     {
-        char cpf[50], novo_cep[50], nova_face[5], novo_compl[50];
+        char cpf[50], novo_cep[50], nova_face[20], novo_compl[100];
         int novo_num = 0;
-        if (sscanf(params, "%s %s %s %d %s", cpf, novo_cep, nova_face, &novo_num, novo_compl) >= 4)
+        if (sscanf(params, "%49s %49s %19s %d %99s", cpf, novo_cep, nova_face, &novo_num, novo_compl) >= 4)
         {
             char buffer[300];
             if (hash_search(ctx->hf_pessoas, cpf, buffer, sizeof(buffer)))
@@ -411,109 +411,44 @@ static void tratar_comando_qry(char *comando, char *params, CtxQry *ctx)
 
                 hash_update(ctx->hf_pessoas, cpf, nova_string);
 
-                // ========== ORIGEM (última quadra consultada com pq) ==========
-                if (ctx->ultima_pq[0] != '\0')
+                // Extrai o char de face: aceita "Face.L" ou "L"
+                char face_char_dest;
+                if (strncmp(nova_face, "Face.", 5) == 0 && nova_face[5] != '\0')
+                    face_char_dest = nova_face[5];
+                else
+                    face_char_dest = nova_face[0];
+
+                // ========== ORIGEM: quadrado na posição atual da pessoa ==========
+                char *old_cep = strtok(NULL, ";");
+                char *old_face_s = strtok(NULL, ";");
+                char *old_num_s = strtok(NULL, ";");
+
+                if (old_cep && old_face_s && old_num_s && old_cep[0] != '\0')
                 {
-                    char buffer_quad_origem[300];
-                    if (hash_search(ctx->hf_quadras, ctx->ultima_pq, buffer_quad_origem, sizeof(buffer_quad_origem)))
+                    char old_face_char;
+                    if (strncmp(old_face_s, "Face.", 5) == 0 && old_face_s[5] != '\0')
+                        old_face_char = old_face_s[5];
+                    else
+                        old_face_char = old_face_s[0];
+
+                    double ox = 0, oy = 0;
+                    if (calcular_coordenadas(ctx->hf_quadras, old_cep, old_face_char, atoi(old_num_s), &ox, &oy))
                     {
-                        char *t = strtok(buffer_quad_origem, ";");
-                        t = strtok(NULL, ";");
-                        double qx_orig = t ? atof(t) : 0;
-                        t = strtok(NULL, ";");
-                        double qy_orig = t ? atof(t) : 0;
-                        t = strtok(NULL, ";");
-                        double qw_orig = t ? atof(t) : 0;
-                        t = strtok(NULL, ";");
-                        double qh_orig = t ? atof(t) : 0;
-
-                        // Gerar quadrados nos vértices da origem (face S)
-                        char *svg_orig1 = malloc(256);
-                        snprintf(svg_orig1, 256, "<svg:rect width=\"10.000000\" height=\"10.000000\" x=\"%f\" y=\"%f\" fill=\"red\" stroke=\"red\" stroke-width=\"1\" fill-opacity=\"0.300000\" rx=\"0.000000\" ry=\"0.000000\" stroke-dasharray=\"1, 1\" />",
-                                 qx_orig - 5, qy_orig + qh_orig - 5);
-                        insert(ctx->decoracoes, svg_orig1);
-
-                        char *svg_orig2 = malloc(256);
-                        snprintf(svg_orig2, 256, "<svg:rect width=\"10.000000\" height=\"10.000000\" x=\"%f\" y=\"%f\" fill=\"red\" stroke=\"red\" stroke-width=\"1\" fill-opacity=\"0.300000\" rx=\"0.000000\" ry=\"0.000000\" stroke-dasharray=\"1, 1\" />",
-                                 qx_orig + qw_orig - 5, qy_orig + qh_orig - 5);
-                        insert(ctx->decoracoes, svg_orig2);
-
-                        // Gerar quadrado maior no centro da origem
-                        char *svg_orig3 = malloc(256);
-                        snprintf(svg_orig3, 256, "<svg:rect width=\"15.000000\" height=\"15.000000\" x=\"%f\" y=\"%f\" fill=\"red\" stroke=\"red\" stroke-width=\"1\" fill-opacity=\"0.300000\" rx=\"0.000000\" ry=\"0.000000\" stroke-dasharray=\"1, 1\" />",
-                                 qx_orig + qw_orig / 2.0 - 7.5, qy_orig + qh_orig - 7.5);
-                        insert(ctx->decoracoes, svg_orig3);
+                        char *svg_orig = malloc(256);
+                        snprintf(svg_orig, 256, "<svg:rect width=\"10.000000\" height=\"10.000000\" x=\"%f\" y=\"%f\" fill=\"red\" stroke=\"red\" stroke-width=\"1\" fill-opacity=\"0.300000\" rx=\"0.000000\" ry=\"0.000000\" stroke-dasharray=\"1, 1\" />",
+                                 ox - 5, oy - 5);
+                        insert(ctx->decoracoes, svg_orig);
                     }
                 }
 
-                // ========== DESTINO ==========
-                char buffer_quad_dest[300];
-                if (hash_search(ctx->hf_quadras, novo_cep, buffer_quad_dest, sizeof(buffer_quad_dest)))
+                // ========== DESTINO: quadrado na posição da nova casa ==========
+                double dx = 0, dy = 0;
+                if (calcular_coordenadas(ctx->hf_quadras, novo_cep, face_char_dest, novo_num, &dx, &dy))
                 {
-                    char *t = strtok(buffer_quad_dest, ";");
-                    t = strtok(NULL, ";");
-                    double qx_dest = t ? atof(t) : 0;
-                    t = strtok(NULL, ";");
-                    double qy_dest = t ? atof(t) : 0;
-                    t = strtok(NULL, ";");
-                    double qw_dest = t ? atof(t) : 0;
-                    t = strtok(NULL, ";");
-                    double qh_dest = t ? atof(t) : 0;
-
-                    double v1x, v1y, v2x, v2y, center_x, center_y;
-                    char face_char = nova_face[0];
-
-                    if (face_char == 'N' || face_char == 'n')
-                    {
-                        v1x = qx_dest;
-                        v1y = qy_dest;
-                        v2x = qx_dest + qw_dest;
-                        v2y = qy_dest;
-                        center_x = qx_dest + qw_dest / 2.0;
-                        center_y = qy_dest;
-                    }
-                    else if (face_char == 'S' || face_char == 's')
-                    {
-                        v1x = qx_dest;
-                        v1y = qy_dest + qh_dest;
-                        v2x = qx_dest + qw_dest;
-                        v2y = qy_dest + qh_dest;
-                        center_x = qx_dest + qw_dest / 2.0;
-                        center_y = qy_dest + qh_dest;
-                    }
-                    else if (face_char == 'L' || face_char == 'l')
-                    {
-                        v1x = qx_dest;
-                        v1y = qy_dest;
-                        v2x = qx_dest;
-                        v2y = qy_dest + qh_dest;
-                        center_x = qx_dest;
-                        center_y = qy_dest + qh_dest / 2.0;
-                    }
-                    else // 'O' ou 'o'
-                    {
-                        v1x = qx_dest + qw_dest;
-                        v1y = qy_dest;
-                        v2x = qx_dest + qw_dest;
-                        v2y = qy_dest + qh_dest;
-                        center_x = qx_dest + qw_dest;
-                        center_y = qy_dest + qh_dest / 2.0;
-                    }
-
-                    char *svg_dest1 = malloc(256);
-                    snprintf(svg_dest1, 256, "<svg:rect width=\"10.000000\" height=\"10.000000\" x=\"%f\" y=\"%f\" fill=\"red\" stroke=\"red\" stroke-width=\"1\" fill-opacity=\"0.300000\" rx=\"0.000000\" ry=\"0.000000\" stroke-dasharray=\"1, 1\" />",
-                             v1x - 5, v1y - 5);
-                    insert(ctx->decoracoes, svg_dest1);
-
-                    char *svg_dest2 = malloc(256);
-                    snprintf(svg_dest2, 256, "<svg:rect width=\"10.000000\" height=\"10.000000\" x=\"%f\" y=\"%f\" fill=\"red\" stroke=\"red\" stroke-width=\"1\" fill-opacity=\"0.300000\" rx=\"0.000000\" ry=\"0.000000\" stroke-dasharray=\"1, 1\" />",
-                             v2x - 5, v2y - 5);
-                    insert(ctx->decoracoes, svg_dest2);
-
-                    char *svg_dest3 = malloc(256);
-                    snprintf(svg_dest3, 256, "<svg:rect width=\"15.000000\" height=\"15.000000\" x=\"%f\" y=\"%f\" fill=\"red\" stroke=\"red\" stroke-width=\"1\" fill-opacity=\"0.300000\" rx=\"0.000000\" ry=\"0.000000\" stroke-dasharray=\"1, 1\" />",
-                             center_x - 7.5, center_y - 7.5);
-                    insert(ctx->decoracoes, svg_dest3);
+                    char *svg_dest = malloc(256);
+                    snprintf(svg_dest, 256, "<svg:rect width=\"10.000000\" height=\"10.000000\" x=\"%f\" y=\"%f\" fill=\"red\" stroke=\"red\" stroke-width=\"1\" fill-opacity=\"0.300000\" rx=\"0.000000\" ry=\"0.000000\" stroke-dasharray=\"1, 1\" />",
+                             dx - 5, dy - 5);
+                    insert(ctx->decoracoes, svg_dest);
                 }
 
                 fprintf(ctx->f_txt, "mud: Morador %s (CPF %s) moveu-se para o CEP %s\n", nome, cpf, novo_cep);
