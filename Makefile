@@ -3,7 +3,7 @@
 # ============================================================
 
 CC      = gcc
-CFLAGS  = -std=c99 -fstack-protector-all -Wall -Wextra -g
+CFLAGS  = -std=c99 -fstack-protector-all -Wall -Wextra -g -DUNITY_INCLUDE_DOUBLE
 
 # ---- Diretórios -------------------------------------------
 SRC_DIR    = src
@@ -55,19 +55,54 @@ $(TARGET): $(MAIN_SRC) $(MOD_OBJS)
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-# --- Testes unitários do HashFile e Pessoa --------------------------
-test: $(TEST_BIN) $(TEST_DIR)/run_tests_pessoa
+# --- Testes unitários gerais --------------------------
+test: $(TEST_BIN) $(TEST_DIR)/run_tests_pessoa $(TEST_DIR)/run_tests_quadra $(TEST_DIR)/run_tests_list $(TEST_DIR)/run_tests_parametros $(TEST_DIR)/run_tests_svg $(TEST_DIR)/run_tests_leitorGeo $(TEST_DIR)/run_tests_leitorPM $(TEST_DIR)/run_tests_leitorQry
 	@echo ""
 	@echo "========== Executando testes HashFile =========="
 	./$(TEST_BIN)
 	@echo "========== Executando testes Pessoa =========="
 	./$(TEST_DIR)/run_tests_pessoa
+	@echo "========== Executando testes Quadra =========="
+	./$(TEST_DIR)/run_tests_quadra
+	@echo "========== Executando testes List =========="
+	./$(TEST_DIR)/run_tests_list
+	@echo "========== Executando testes Parametros =========="
+	./$(TEST_DIR)/run_tests_parametros
+	@echo "========== Executando testes SVG =========="
+	./$(TEST_DIR)/run_tests_svg
+	@echo "========== Executando testes LeitorGeo =========="
+	./$(TEST_DIR)/run_tests_leitorGeo
+	@echo "========== Executando testes LeitorPM =========="
+	./$(TEST_DIR)/run_tests_leitorPM
+	@echo "========== Executando testes LeitorQry =========="
+	./$(TEST_DIR)/run_tests_leitorQry
 	@echo "==============================================="
 
 $(TEST_BIN): $(TEST_HASH) $(SRC_DIR)/HashFile.c $(UNITY_SRC)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ -lm
 
 $(TEST_DIR)/run_tests_pessoa: $(TEST_DIR)/testPessoa.c $(SRC_DIR)/pessoa.c $(UNITY_SRC)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ -lm
+
+$(TEST_DIR)/run_tests_quadra: $(TEST_DIR)/testQuadra.c $(SRC_DIR)/quadra.c $(UNITY_SRC)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ -lm
+
+$(TEST_DIR)/run_tests_list: $(TEST_DIR)/testList.c $(SRC_DIR)/list.c $(UNITY_SRC)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ -lm
+
+$(TEST_DIR)/run_tests_parametros: $(TEST_DIR)/testParametros.c $(SRC_DIR)/parametros.c $(UNITY_SRC)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ -lm
+
+$(TEST_DIR)/run_tests_svg: $(TEST_DIR)/testSvg.c $(SRC_DIR)/svg.c $(SRC_DIR)/HashFile.c $(SRC_DIR)/list.c $(UNITY_SRC)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ -lm
+
+$(TEST_DIR)/run_tests_leitorGeo: $(TEST_DIR)/testLeitorGeo.c $(SRC_DIR)/leitor_geo.c $(SRC_DIR)/HashFile.c $(UNITY_SRC)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ -lm
+
+$(TEST_DIR)/run_tests_leitorPM: $(TEST_DIR)/testLeitorPM.c $(SRC_DIR)/leitorPM.c $(SRC_DIR)/HashFile.c $(UNITY_SRC)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ -lm
+
+$(TEST_DIR)/run_tests_leitorQry: $(TEST_DIR)/testLeitorQry.c $(SRC_DIR)/leitorQry.c $(SRC_DIR)/HashFile.c $(SRC_DIR)/list.c $(UNITY_SRC)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ -lm
 
 run_test: test
@@ -78,7 +113,7 @@ dirs:
 
 # --- Limpeza ------------------------------------------------
 clean:
-	rm -f $(MOD_OBJS) $(TARGET) $(TEST_BIN)
+	rm -f $(MOD_OBJS) $(TARGET) $(TEST_BIN) $(TEST_DIR)/run_tests_*
 	rm -f *.hf *.hfc *.hfd *.dat *.idx *.svg *.txt
 	rm -f $(TEST_DIR)/*.dat $(TEST_DIR)/*.idx
 	find $(OUT_DIR) -type f \( -name "*.svg" -o -name "*.hf" -o -name "*.hfc" -o -name "*.hfd" -o -name "*.dat" -o -name "*.idx" -o -name "*.txt" \) -delete 2>/dev/null || true

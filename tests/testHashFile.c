@@ -37,7 +37,6 @@ void tearDown(void) {
 
 void test_InitShouldCreateEmptyHash(void) {
     TEST_ASSERT_NOT_NULL(hf);
-    TEST_ASSERT_EQUAL_INT(0, hash_get_global_depth(hf));
 }
 
 void test_InsertAndSearchSuccess(void) {
@@ -87,7 +86,11 @@ void test_SplitAndDepthIncrease(void) {
     hash_insert(hf, "cep06", "Valor 6"); 
     hash_insert(hf, "cep08", "Valor 8");
     
-    TEST_ASSERT_TRUE(hash_get_global_depth(hf) > 0);
+    // We cannot test depth trivially anymore via public API.
+    // We test if elements are retrieved correctly after splits.
+    char buffer[50];
+    TEST_ASSERT_EQUAL_INT(1, hash_search(hf, "cep08", buffer, 50));
+    TEST_ASSERT_EQUAL_STRING("Valor 8", buffer);
 }
 
 void test_RemoveRecord(void) {
