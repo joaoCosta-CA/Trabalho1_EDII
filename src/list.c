@@ -79,6 +79,13 @@ Posic getLast(Lista l) {
     return (Posic) list->tail;
 }
 
+Posic getPrevious(Lista l, Posic p) {
+    (void) l;
+
+    Node *node = (Node *) p;
+    if (!node) return NULL;
+    return (Posic) node->prev;
+}
 
 void killList(Lista l, void (*freeItem)(void*)) {
     StList *list = (StList *) l;

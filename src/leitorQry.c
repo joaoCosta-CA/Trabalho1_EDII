@@ -353,7 +353,7 @@ static void cmd_nasc(char *params, CtxQry *ctx)
         return;
 
     char nova[300];
-    snprintf(nova, sizeof(nova), "%s;%s;%s;%s;;;;;;", nome, sobrenome, sexo, nasc);
+    snprintf(nova, sizeof(nova), "%s;%s;%s;%s;;;0;", nome, sobrenome, sexo, nasc);
 
     if (hash_insert(ctx->hf_pessoas, cpf, nova))
     {
@@ -443,10 +443,10 @@ static void cmd_mud(char *params, CtxQry *ctx)
 
 static void cmd_dspj(char *params, CtxQry *ctx)
 {
-    char cpf[50], buf[300];
-    if (sscanf(params, "%49s", cpf) != 1)
+    char cep_quadra[50], buf[300];
+    if (sscanf(params, "%49s", cep_quadra) != 1)
         return;
-    if (!hash_search(ctx->hf_pessoas, cpf, buf, sizeof(buf)))
+    if (!hash_search(ctx->hf_pessoas, cep_quadra, buf, sizeof(buf)))
         return;
 
     char *nome = strtok(buf, ";");
@@ -471,11 +471,11 @@ static void cmd_dspj(char *params, CtxQry *ctx)
         }
     }
 
-    rastrear_operacao(ctx, cpf, "dspj");
+    rastrear_operacao(ctx, cep_quadra, "dspj");
     fprintf(ctx->f_txt,
             "dspj: Morador CPF %s - %s %s, Sexo: %s, Nasc: %s, CEP antigo: %s DESPEJADO!\n",
-            cpf, nome, sobrenome, sexo, nasc, cep);
-    hash_remove(ctx->hf_pessoas, cpf);
+            cep_quadra, nome, sobrenome, sexo, nasc, cep);
+    hash_remove(ctx->hf_pessoas, cep_quadra);
 }
 
 /* ─── Dispatcher principal ───────────────────────────────────────────────── */
@@ -534,6 +534,7 @@ static void gerar_legenda(CtxQry *ctx)
 
     char *box = malloc(512);
     snprintf(box, 512,
+             "<!-- LEGENDA -->"
              "<svg:rect width=\"100\" height=\"50\" x=\"1460\" y=\"0\""
              " fill=\"%s\" stroke=\"black\" stroke-width=\"1\""
              " fill-opacity=\"1\" rx=\"20\" ry=\"20\" />",

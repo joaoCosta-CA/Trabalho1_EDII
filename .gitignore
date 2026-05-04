@@ -28,3 +28,4 @@ tests/run_tests_pessoa
 # Pastas de saída
 outputs/
 saida/
+.vscode/

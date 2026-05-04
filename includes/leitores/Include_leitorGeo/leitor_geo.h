@@ -1,5 +1,6 @@
 /**
  * @file leitor_geo.h
+ * @author João Costa
  * @brief Módulo de Leitura de Arquivos .geo
  * 
  * Este módulo implementa o parser para arquivos de descrição geométrica (.geo).
@@ -30,9 +31,9 @@
  * Abre o arquivo especificado, interpreta os comandos de criação de
  * formas geométricas e insere cada forma criada na lista fornecida.
  * 
- * @param diretorio_base Diretório onde está localizado o arquivo
- * @param nome_arquivo Nome do arquivo .geo a ser lido
- * @param quart Lista onde os quarteirões serão inseridas (deve estar criada)
+ * @param diretorio_base Diretório onde está localizado o arquivo.
+ * @param nome_arquivo   Nome do arquivo .geo a ser lido (sem o caminho).
+ * @param hash_quadras   HashFile onde as quadras lidas serão inseridas (deve estar aberto).
  */
 void ler_arquivo_geo(const char *diretorio_base, const char *nome_arquivo, HashFile hash_quadras);
 

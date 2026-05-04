@@ -46,7 +46,7 @@ static unsigned int internal_hash(const char *key, int depth)
     }
     if (depth == 0)
         return 0;
-    return h & ((1 << depth) - 1);
+    return h & ((unsigned int)((1 << depth) - 1));
 }
 
 /**
@@ -90,7 +90,7 @@ static void internal_redistribute(FILE *fp, long old_offset, long new_offset, in
 
     old_b.local_depth = new_depth;
     old_b.count = s_count;
-    memcpy(old_b.records, staying, sizeof(Record) * s_count);
+    memcpy(old_b.records, staying, sizeof(Record) * (size_t)s_count);
 
     fseek(fp, old_offset, SEEK_SET);
     fwrite(&old_b, sizeof(Bucket), 1, fp);
@@ -117,7 +117,7 @@ static void internal_split(HashFile hf, int index)
         int old_size = 1 << dir->global_depth;
         dir->global_depth++;
         int new_size = 1 << dir->global_depth;
-        dir->bucket_offsets = realloc(dir->bucket_offsets, sizeof(long) * new_size);
+        dir->bucket_offsets = realloc(dir->bucket_offsets, sizeof(long) * (size_t)new_size);
         for (int i = 0; i < old_size; i++)
             dir->bucket_offsets[i + old_size] = dir->bucket_offsets[i];
     }
@@ -169,8 +169,8 @@ HashFile hash_open(const char *dat_path, const char *idx_path)
         hf->dir = malloc(sizeof(Directory));
         fread(&hf->dir->global_depth, sizeof(int), 1, fidx);
         int size = 1 << hf->dir->global_depth;
-        hf->dir->bucket_offsets = malloc(sizeof(long) * size);
-        fread(hf->dir->bucket_offsets, sizeof(long), size, fidx);
+        hf->dir->bucket_offsets = malloc(sizeof(long) * (size_t)size);
+        fread(hf->dir->bucket_offsets, sizeof(long), (size_t)size, fidx);
         fclose(fidx);
     }
     return hf;
@@ -206,7 +206,7 @@ int hash_insert(HashFile hf, const char *key, const char *value)
     }
     else
     {
-        internal_split(hf, idx);
+        internal_split(hf, (int)idx);
         return hash_insert(hf, key, value);
     }
 }
@@ -229,7 +229,7 @@ int hash_search(HashFile hf, const char *key, char *out_buffer, int buffer_size)
             /* Correção do crash: só copia se o buffer não for NULL */
             if (out_buffer != NULL && buffer_size > 0)
             {
-                strncpy(out_buffer, b.records[i].data, buffer_size - 1);
+                strncpy(out_buffer, b.records[i].data, (size_t)(buffer_size - 1));
                 out_buffer[buffer_size - 1] = '\0';
             }
             return 1;
@@ -245,7 +245,7 @@ void hash_close(HashFile hf)
     FILE *fidx = fopen(ihf->idx_path, "wb");
     fwrite(&ihf->dir->global_depth, sizeof(int), 1, fidx);
     int size = 1 << ihf->dir->global_depth;
-    fwrite(ihf->dir->bucket_offsets, sizeof(long), size, fidx);
+    fwrite(ihf->dir->bucket_offsets, sizeof(long), (size_t)size, fidx);
     fclose(fidx);
 
     fclose(ihf->fp);
@@ -295,16 +295,6 @@ int hash_remove(HashFile hf, const char *key)
     return 0;
 }
 
-// static int hash_get_global_depth(HashFile hf)
-// {
-//     InternalHashFile *ihf = (InternalHashFile *)hf;
-
-//     if (hf == NULL || ihf->dir == NULL)
-//     {
-//         return -1;
-//     }
-//     return ihf->dir->global_depth;
-// }
 
 int hash_update(HashFile hf, const char *key, const char *new_value)
 {
@@ -341,7 +331,7 @@ void hash_forall(HashFile hf, void (*callback)(const char *key, const char *valu
 
     int num_indices = 1 << ihf->dir->global_depth;
     /* Caso global_depth == 0, num_indices = 1, alocamos pelo menos 1 */
-    long *visited_offsets = malloc(sizeof(long) * (num_indices > 0 ? num_indices : 1));
+    long *visited_offsets = malloc(sizeof(long) * (size_t)(num_indices > 0 ? num_indices : 1));
     int visited_count = 0;
 
     for (int i = 0; i < num_indices; i++)
@@ -448,7 +438,7 @@ void hash_dump(HashFile hf, const char *hfd_path)
     write_utf16le_string(out, "*Dump buckets\r\n");
 
     /* Aloca array de offsets visitados */
-    long *visited = malloc(sizeof(long) * (num_indices > 0 ? num_indices : 1));
+    long *visited = malloc(sizeof(long) * (size_t)(num_indices > 0 ? num_indices : 1));
     int visited_count = 0;
 
     for (int i = 0; i < num_indices; i++)

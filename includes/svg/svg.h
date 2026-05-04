@@ -1,3 +1,14 @@
+/**
+ * @file svg.h
+ * @author João Costa
+ * @brief Módulo de geração de arquivos SVG.
+ *
+ * Fornece funções para iniciar, popular e finalizar um arquivo SVG
+ * a partir dos dados de quadras e das decorações geradas pelos
+ * comandos .qry. O viewBox é calculado automaticamente com base
+ * na bounding box de todas as quadras carregadas.
+ */
+
 #ifndef SVG_H
 #define SVG_H
 

@@ -1,3 +1,12 @@
+/**
+ * @file pessoa.h
+ * @author João Costa
+ * @brief Módulo de representação de uma Pessoa no sistema.
+ *
+ * Define o tipo opaco @c Pessoa e as funções de criação, destruição
+ * e acesso (getters) aos seus atributos demográficos.
+ */
+
 #ifndef PESSOA_H
 #define PESSOA_H
 
@@ -27,26 +36,36 @@ void destruir_pessoa(Pessoa pessoa);
 
 /**
  * @brief Retorna o CPF da pessoa.
+ * @param pessoa Instância da Pessoa.
+ * @return String com o CPF.
  */
 const char* pessoa_get_cpf(Pessoa pessoa);
 
 /**
  * @brief Retorna o nome da pessoa.
+ * @param pessoa Instância da Pessoa.
+ * @return String com o nome.
  */
 const char* pessoa_get_nome(Pessoa pessoa);
 
 /**
  * @brief Retorna o sobrenome da pessoa.
+ * @param pessoa Instância da Pessoa.
+ * @return String com o sobrenome.
  */
 const char* pessoa_get_sobrenome(Pessoa pessoa);
 
 /**
  * @brief Retorna o sexo da pessoa.
+ * @param pessoa Instância da Pessoa.
+ * @return Caractere 'M' ou 'F'.
  */
 char pessoa_get_sexo(Pessoa pessoa);
 
 /**
  * @brief Retorna a data de nascimento da pessoa.
+ * @param pessoa Instância da Pessoa.
+ * @return String com a data no formato DD/MM/AAAA.
  */
 const char* pessoa_get_data_nascimento(Pessoa pessoa);
 

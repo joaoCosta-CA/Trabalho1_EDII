@@ -191,8 +191,8 @@ void svg_gerar_decoracoes(void *decoracoes_list, FILE *f)
         char *svg_str = (char *)get(decoracoes_list, pos);
         if (svg_str)
         {
-            // Verificar se é a legenda (contém x="1460")
-            if (strstr(svg_str, "1460.000000"))
+            /* Verificar se é a legenda (marcada com prefixo explícito) */
+            if (strstr(svg_str, "<!-- LEGENDA -->"))
             {
                 // Se ainda não fechou o grupo, fechar agora
                 if (!fechou_grupo)

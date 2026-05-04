@@ -1,6 +1,10 @@
 /**
  * @file leitorPM.h
- * @brief Leitor do arquivo .pm (Pessoas e Moradores)
+ * @author João Costa
+ * @brief Módulo de leitura do arquivo .pm (Pessoas e Moradores).
+ *
+ * Processa o arquivo de entrada .pm, que contém registros de criação
+ * e atualização de pessoas e seus endereços residenciais no sistema.
  */
 #ifndef LEITOR_PM_H
 #define LEITOR_PM_H

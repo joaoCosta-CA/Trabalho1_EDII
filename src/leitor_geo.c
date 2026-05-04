@@ -19,8 +19,13 @@ static void tratar_comando_q(char *params, HashFile hf_quadras);
 static void tratar_comando_cq(char *params);
 
 /* Função Principal */
-void ler_arquivo_geo(const char *diretorio_base, const char *nome_arquivo, void *hash_quadras)
+void ler_arquivo_geo(const char *diretorio_base, const char *nome_arquivo, HashFile hash_quadras)
 {
+    /* Reinicia o estilo para o padrão a cada novo arquivo .geo */
+    estilo_padrao.sw = 1.0;
+    strncpy(estilo_padrao.cfill, "white", sizeof(estilo_padrao.cfill) - 1);
+    strncpy(estilo_padrao.cstrk, "black", sizeof(estilo_padrao.cstrk) - 1);
+
     char caminho_completo[512];
 
     if (diretorio_base && strlen(diretorio_base) > 0)
@@ -47,7 +52,8 @@ void ler_arquivo_geo(const char *diretorio_base, const char *nome_arquivo, void 
 
         /* Separa o comando do restante dos parâmetros */
         char *comando = strtok(linha, " \t");
-        char *params = strtok(NULL, ""); // Pega o resto da linha inalterado para processamento interno
+        /* Pega o resto da linha inalterado para processamento interno */
+        char *params = strtok(NULL, "");
 
         if (!comando)
             continue;

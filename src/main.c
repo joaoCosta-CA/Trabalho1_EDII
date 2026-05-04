@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 
     /* Nome base para arquivos de saída (derivado do .geo e .qry) */
     char nome_base[512];
-    extrair_nome_base(arq_geo, nome_base, 256);
+    extrair_nome_base(arq_geo, nome_base, sizeof(nome_base));
 
     if (arq_qry)
     {
