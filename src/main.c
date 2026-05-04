@@ -144,7 +144,6 @@ int main(int argc, char *argv[])
     double min_x, min_y, max_x, max_y;
     svg_calcular_bbox(hf_quadras, &min_x, &min_y, &max_x, &max_y);
 
-    // Adiciona uma margem para evitar cortes na borda das figuras
     double margin = 5.0;
     double vx = min_x - margin;
     double vy = min_y - margin;

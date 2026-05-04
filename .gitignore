@@ -24,6 +24,7 @@ tests/run_tests_pessoa
 *.geo
 *.svg
 *.txt
+*.html
 
 # Pastas de saída
 outputs/

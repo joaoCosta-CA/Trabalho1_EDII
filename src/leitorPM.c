@@ -44,40 +44,61 @@ static void tratar_comando_m(char *params, HashFile hf)
 
             /* Faz o parse da parte demográfica do registro existente */
             char *token = strtok(dados_atuais, ";");
-            if (token) strncpy(nome, token, 49);
+            if (token)
+                strncpy(nome, token, 49);
 
             token = strtok(NULL, ";");
-            if (token) strncpy(sobrenome, token, 49);
+            if (token)
+                strncpy(sobrenome, token, 49);
 
             token = strtok(NULL, ";");
-            if (token && strlen(token) > 0) sexo = token[0];
+            if (token && strlen(token) > 0)
+                sexo = token[0];
 
             token = strtok(NULL, ";");
-            if (token) strncpy(nasc, token, 19);
+            if (token)
+                strncpy(nasc, token, 19);
 
             /* Remonta a string de dados combinando a pessoa com seu novo endereço */
             char nova_string[400];
             snprintf(nova_string, sizeof(nova_string), "%s;%s;%c;%s;%s;%c;%d;%.200s",
                      nome, sobrenome, sexo, nasc, cep, face, num, compl);
-            
+
             /* Grava no HashFile o dado de morador */
             hash_update(hf, cpf, nova_string);
         }
     }
 }
 
-void ler_arquivo_pm(const char *diretorio_base, const char *nome_arquivo, HashFile hf_pessoas)
+static void monta_caminho_completo(const char *diretorio_base, const char *nome_arquivo,
+                                   char *caminho_completo, int tamanho)
 {
-    char caminho_completo[512] = {0};
-
-    if (diretorio_base && strlen(diretorio_base) > 0)
+    if (nome_arquivo == NULL || nome_arquivo[0] == '\0')
     {
-        snprintf(caminho_completo, sizeof(caminho_completo), "%s/%s", diretorio_base, nome_arquivo);
+        caminho_completo[0] = '\0';
+        return;
+    }
+
+    if (strchr(nome_arquivo, '/') || strchr(nome_arquivo, '\\'))
+    {
+        strncpy(caminho_completo, nome_arquivo, tamanho - 1);
+        caminho_completo[tamanho - 1] = '\0';
+    }
+    else if (diretorio_base && strlen(diretorio_base) > 0)
+    {
+        snprintf(caminho_completo, tamanho, "%s/%s", diretorio_base, nome_arquivo);
     }
     else
     {
-        strncpy(caminho_completo, nome_arquivo, sizeof(caminho_completo) - 1);
+        strncpy(caminho_completo, nome_arquivo, tamanho - 1);
+        caminho_completo[tamanho - 1] = '\0';
     }
+}
+
+void ler_arquivo_pm(const char *diretorio_base, const char *nome_arquivo, HashFile hf_pessoas)
+{
+    char caminho_completo[512] = {0};
+    monta_caminho_completo(diretorio_base, nome_arquivo, caminho_completo, sizeof(caminho_completo));
 
     FILE *arquivo = fopen(caminho_completo, "r");
     if (!arquivo)

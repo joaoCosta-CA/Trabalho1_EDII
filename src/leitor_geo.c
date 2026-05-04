@@ -11,6 +11,31 @@ typedef struct
     char cstrk[32];
 } EstiloAtual;
 
+static void monta_caminho_completo(const char *diretorio_base, const char *nome_arquivo,
+                                   char *caminho_completo, int tamanho)
+{
+    if (nome_arquivo == NULL || nome_arquivo[0] == '\0')
+    {
+        caminho_completo[0] = '\0';
+        return;
+    }
+
+    if (strchr(nome_arquivo, '/') || strchr(nome_arquivo, '\\'))
+    {
+        strncpy(caminho_completo, nome_arquivo, tamanho - 1);
+        caminho_completo[tamanho - 1] = '\0';
+    }
+    else if (diretorio_base && strlen(diretorio_base) > 0)
+    {
+        snprintf(caminho_completo, tamanho, "%s/%s", diretorio_base, nome_arquivo);
+    }
+    else
+    {
+        strncpy(caminho_completo, nome_arquivo, tamanho - 1);
+        caminho_completo[tamanho - 1] = '\0';
+    }
+}
+
 /* Estado da estilização corrente mantida sequencialmente pelo arquivo */
 static EstiloAtual estilo_padrao = {1.0, "white", "black"};
 
@@ -27,15 +52,7 @@ void ler_arquivo_geo(const char *diretorio_base, const char *nome_arquivo, HashF
     strncpy(estilo_padrao.cstrk, "black", sizeof(estilo_padrao.cstrk) - 1);
 
     char caminho_completo[512];
-
-    if (diretorio_base && strlen(diretorio_base) > 0)
-    {
-        snprintf(caminho_completo, sizeof(caminho_completo), "%s/%s", diretorio_base, nome_arquivo);
-    }
-    else
-    {
-        strncpy(caminho_completo, nome_arquivo, sizeof(caminho_completo));
-    }
+    monta_caminho_completo(diretorio_base, nome_arquivo, caminho_completo, sizeof(caminho_completo));
 
     FILE *arquivo = fopen(caminho_completo, "r");
     if (!arquivo)
@@ -63,7 +80,8 @@ void ler_arquivo_geo(const char *diretorio_base, const char *nome_arquivo, HashF
             tratar_comando_q(params, hash_quadras);
             break;
         case 'c':
-            if(strcmp(comando, "cq") == 0){
+            if (strcmp(comando, "cq") == 0)
+            {
                 tratar_comando_cq(params);
             }
             break;
@@ -81,12 +99,12 @@ static void tratar_comando_q(char *params, HashFile hf_quadras)
 
     if (sscanf(params, "%29s %lf %lf %lf %lf", cep, &x, &y, &w, &h) == 5)
     {
-        /* Serializa num formato separado por ; 
+        /* Serializa num formato separado por ;
            cep;x;y;w;h;sw;cfill;cstrk */
         char dados_serializados[250];
 
         snprintf(dados_serializados, sizeof(dados_serializados), "%s;%f;%f;%f;%f;%f;%s;%s",
-                 cep, x, y, w, h, 
+                 cep, x, y, w, h,
                  estilo_padrao.sw, estilo_padrao.cfill, estilo_padrao.cstrk);
         hash_insert(hf_quadras, cep, dados_serializados);
     }

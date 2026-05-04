@@ -228,7 +228,6 @@ static void cmd_rq(char *params, CtxQry *ctx)
              "<svg:line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"red\" stroke-width=\"2\"/>",
              qx, qy, qx + qw, qy + qh, qx + qw, qy, qx, qy + qh);
     decora(ctx, svg);
-
     fprintf(ctx->f_txt, "rq: Quadra %s destruida.\n", cep);
 
     RqState st = {cep, ctx->f_txt};
@@ -558,15 +557,37 @@ static void gerar_legenda(CtxQry *ctx)
 
 /* ─── Ponto de entrada público ───────────────────────────────────────────── */
 
+static void monta_caminho_completo(const char *diretorio_base, const char *nome_arquivo,
+                                   char *caminho, int tamanho)
+{
+    if (nome_arquivo == NULL || nome_arquivo[0] == '\0')
+    {
+        caminho[0] = '\0';
+        return;
+    }
+
+    if (strchr(nome_arquivo, '/') || strchr(nome_arquivo, '\\'))
+    {
+        strncpy(caminho, nome_arquivo, tamanho - 1);
+        caminho[tamanho - 1] = '\0';
+    }
+    else if (diretorio_base && strlen(diretorio_base) > 0)
+    {
+        snprintf(caminho, tamanho, "%s/%s", diretorio_base, nome_arquivo);
+    }
+    else
+    {
+        strncpy(caminho, nome_arquivo, tamanho - 1);
+        caminho[tamanho - 1] = '\0';
+    }
+}
+
 LeitorQry leitor_qry(const char *diretorio_base, const char *nome_arquivo,
                      HashFile hf_quadras, HashFile hf_pessoas,
                      const char *dir_saida, const char *nome_base)
 {
     char caminho[512];
-    if (diretorio_base && strlen(diretorio_base) > 0)
-        snprintf(caminho, sizeof(caminho), "%s/%s", diretorio_base, nome_arquivo);
-    else
-        strncpy(caminho, nome_arquivo, sizeof(caminho));
+    monta_caminho_completo(diretorio_base, nome_arquivo, caminho, sizeof(caminho));
 
     FILE *arquivo = fopen(caminho, "r");
     if (!arquivo)
