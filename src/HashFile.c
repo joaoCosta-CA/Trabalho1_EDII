@@ -31,6 +31,8 @@ typedef struct
     Directory *dir;
     FILE *fp;
     char idx_path[256];
+    char *expansions_log;
+    int expansions_log_size;
 } InternalHashFile;
 
 /**
@@ -136,6 +138,19 @@ static void internal_split(HashFile hf, int index)
         dir->bucket_offsets[i] = new_offset;
 
     internal_redistribute(fp, old_offset, new_offset, new_l_depth);
+
+    char log_entry[128];
+    snprintf(log_entry, sizeof(log_entry), "Split no bloco %d (nova prof. local: %d)\r\n", index, new_l_depth);
+    int len = strlen(log_entry);
+    if (!ihf->expansions_log) {
+        ihf->expansions_log = malloc(len + 1);
+        strcpy(ihf->expansions_log, log_entry);
+        ihf->expansions_log_size = len + 1;
+    } else {
+        ihf->expansions_log = realloc(ihf->expansions_log, ihf->expansions_log_size + len);
+        strcat(ihf->expansions_log, log_entry);
+        ihf->expansions_log_size += len;
+    }
 }
 
 HashFile hash_open(const char *dat_path, const char *idx_path)
@@ -173,6 +188,8 @@ HashFile hash_open(const char *dat_path, const char *idx_path)
         fread(hf->dir->bucket_offsets, sizeof(long), (size_t)size, fidx);
         fclose(fidx);
     }
+    hf->expansions_log = NULL;
+    hf->expansions_log_size = 0;
     return hf;
 }
 
@@ -249,6 +266,8 @@ void hash_close(HashFile hf)
     fclose(fidx);
 
     fclose(ihf->fp);
+    if (ihf->expansions_log)
+        free(ihf->expansions_log);
     free(ihf->dir->bucket_offsets);
     free(ihf->dir);
     free(ihf);
@@ -476,6 +495,10 @@ void hash_dump(HashFile hf, const char *hfd_path)
         }
     }
 
+    write_utf16le_string(out, "\r\n*Expansoes\r\n");
+    if (ihf->expansions_log) {
+        write_utf16le_string(out, ihf->expansions_log);
+    }
     write_utf16le_string(out, "FIM DUMP");
 
     free(visited);

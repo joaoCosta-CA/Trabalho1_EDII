@@ -34,6 +34,7 @@ typedef struct
 {
     const char *target_cep;
     FILE *f_txt;
+    HashFile hf_pessoas;
 } RqState;
 
 /* ─── Utilitários ────────────────────────────────────────────────────────── */
@@ -188,13 +189,20 @@ static void rq_callback(const char *key, const char *value, void *userdata)
 
     char *nome = strtok(buf, ";");
     char *sobrenome = strtok(NULL, ";");
-    strtok(NULL, ";");
-    strtok(NULL, ";");
+    char *sexo = strtok(NULL, ";");
+    char *nasc = strtok(NULL, ";");
     char *cep = strtok(NULL, ";");
 
     if (cep && strcmp(cep, st->target_cep) == 0)
+    {
         fprintf(st->f_txt, "rq: Morador afetado - CPF: %s, Nome: %s %s\n",
                 key, nome, sobrenome ? sobrenome : "");
+        char nova_str[450];
+        snprintf(nova_str, sizeof(nova_str), "%s;%s;%s;%s;;;0;",
+                 nome ? nome : "", sobrenome ? sobrenome : "",
+                 sexo ? sexo : "", nasc ? nasc : "");
+        hash_update(st->hf_pessoas, key, nova_str);
+    }
 }
 
 /* ─── Handlers de cada comando ───────────────────────────────────────────── */
@@ -230,7 +238,7 @@ static void cmd_rq(char *params, CtxQry *ctx)
     decora(ctx, svg);
     fprintf(ctx->f_txt, "rq: Quadra %s destruida.\n", cep);
 
-    RqState st = {cep, ctx->f_txt};
+    RqState st = {cep, ctx->f_txt, ctx->hf_pessoas};
     hash_forall(ctx->hf_pessoas, rq_callback, &st);
     hash_remove(ctx->hf_quadras, cep);
 }
